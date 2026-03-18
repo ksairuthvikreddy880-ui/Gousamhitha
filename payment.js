@@ -845,34 +845,27 @@ function handleUpiPayment() {
     const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
     console.log('UPI Link:', upiLink);
 
-    // Inform user before redirect
-    alert(`You will be redirected to your UPI app to complete payment of ₹${amount}.\n\nUPI ID: ${upiId}\nAmount: ₹${amount}\n\nThis works with Paytm, Google Pay, PhonePe and all UPI apps.`);
+    // Show fallback info in UI BEFORE redirect (no alert, no delay)
+    const body = document.querySelector('.payment-sidebar-body');
+    if (body) {
+        const existing = document.getElementById('upi-fallback-info');
+        if (existing) existing.remove();
 
-    // Redirect to UPI deep link (opens any installed UPI app)
+        const info = document.createElement('div');
+        info.id = 'upi-fallback-info';
+        info.style.cssText = 'background:#f0f7f0;border:2px solid #4a7c59;border-radius:8px;padding:1.2rem;margin-top:1rem;text-align:center;';
+        info.innerHTML = `
+            <p style="font-weight:600;color:#2e7d32;margin-bottom:0.5rem;">Opening UPI app for ₹${amount}...</p>
+            <p style="font-size:0.9rem;color:#666;margin-bottom:0.8rem;">If app didn't open, pay manually:</p>
+            <p style="font-size:1rem;margin:0.3rem 0;"><strong>UPI ID:</strong> ${upiId}</p>
+            <p style="font-size:1rem;margin:0.3rem 0;"><strong>Amount:</strong> ₹${amount}</p>
+            <button class="btn btn-primary" style="margin-top:1rem;width:100%;" onclick="processUpiPaymentCompletion()">I've Paid</button>
+        `;
+        body.appendChild(info);
+    }
+
+    // Direct redirect — must happen synchronously inside user click handler
     window.location.href = upiLink;
-
-    // Fallback: if redirect doesn't work, show manual details after 3 seconds
-    setTimeout(() => {
-        const fallbackDiv = document.getElementById('upi-fallback-info');
-        if (fallbackDiv) {
-            fallbackDiv.style.display = 'block';
-        } else {
-            const body = document.querySelector('.payment-sidebar-body');
-            if (body) {
-                const info = document.createElement('div');
-                info.id = 'upi-fallback-info';
-                info.style.cssText = 'background:#f0f7f0;border:2px solid #4a7c59;border-radius:8px;padding:1.2rem;margin-top:1rem;text-align:center;';
-                info.innerHTML = `
-                    <p style="font-weight:600;color:#2e7d32;margin-bottom:0.5rem;">If app didn't open, pay manually:</p>
-                    <p style="font-size:1.1rem;margin:0.3rem 0;"><strong>UPI ID:</strong> ${upiId}</p>
-                    <p style="font-size:1.1rem;margin:0.3rem 0;"><strong>Amount:</strong> ₹${amount}</p>
-                    <p style="font-size:0.85rem;color:#666;margin-top:0.5rem;">After paying, click "I've Paid" below.</p>
-                    <button class="btn btn-primary" style="margin-top:1rem;width:100%;" onclick="processUpiPaymentCompletion()">I've Paid</button>
-                `;
-                body.appendChild(info);
-            }
-        }
-    }, 3000);
 }
 
 function processUpiPaymentCompletion() {
