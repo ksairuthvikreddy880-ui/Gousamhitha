@@ -66,6 +66,16 @@ const paymentModalHTML = `
                         </div>
                     </div>
                 </label>
+                <label class="payment-method-option">
+                    <input type="radio" name="payment-method" value="Scan">
+                    <div class="payment-method-card">
+                        <div class="payment-method-icon">📷</div>
+                        <div class="payment-method-info">
+                            <div class="payment-method-name">Scan to Pay</div>
+                            <div class="payment-method-desc">Scan QR code with any UPI app</div>
+                        </div>
+                    </div>
+                </label>
             </div>
             <div id="payment-processing" class="payment-processing" style="display: none;">
                 <div class="payment-spinner"></div>
