@@ -521,9 +521,11 @@ function openCheckoutPayment(orderData) {
 function calculateAndDisplayTotal(orderData) {
     console.log('🧮 Starting fresh calculation with orderData:', orderData);
     
-    // Step 1: Calculate subtotal from items
+    // Use pre-calculated subtotal from checkout if available
     let subtotal = 0;
-    if (orderData.items && orderData.items.length > 0) {
+    if (orderData.subtotal && orderData.subtotal > 0) {
+        subtotal = orderData.subtotal;
+    } else if (orderData.items && orderData.items.length > 0) {
         subtotal = orderData.items.reduce((sum, item) => {
             const itemTotal = item.price * item.quantity;
             console.log(`Item: ${item.name}, Price: ₹${item.price}, Qty: ${item.quantity}, Total: ₹${itemTotal}`);

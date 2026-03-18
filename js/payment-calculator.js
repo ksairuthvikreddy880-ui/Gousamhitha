@@ -49,17 +49,25 @@ class PaymentCalculator {
     calculateFromOrderData(orderData) {
         console.log('💳 Calculating from order data:', orderData);
         
-        if (!orderData || !orderData.items || orderData.items.length === 0) {
-            console.log('⚠️ No order data, using fallback');
-            return this.calculateFallback();
+        if (!orderData) {
+            console.log('⚠️ No order data provided');
+            return 0;
         }
-        
-        // Calculate subtotal from items
-        this.subtotal = orderData.items.reduce((sum, item) => {
-            const itemTotal = (item.price || 0) * (item.quantity || 0);
-            console.log(`Item: ${item.name}, ₹${item.price} × ${item.quantity} = ₹${itemTotal}`);
-            return sum + itemTotal;
-        }, 0);
+
+        // Use pre-calculated subtotal from checkout if available
+        if (orderData.subtotal && orderData.subtotal > 0) {
+            this.subtotal = orderData.subtotal;
+        } else if (orderData.items && orderData.items.length > 0) {
+            // Recalculate from items as fallback
+            this.subtotal = orderData.items.reduce((sum, item) => {
+                const itemTotal = (item.price || 0) * (item.quantity || 0);
+                console.log(`Item: ${item.name}, ₹${item.price} × ${item.quantity} = ₹${itemTotal}`);
+                return sum + itemTotal;
+            }, 0);
+        } else {
+            console.log('⚠️ No items or subtotal in order data');
+            return 0;
+        }
         
         // Calculate tax
         this.tax = this.subtotal * this.taxRate;
