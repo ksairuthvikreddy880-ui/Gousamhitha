@@ -358,8 +358,10 @@
                 console.log('🚨 Using emergency openCheckoutPayment function');
                 console.log('Order data:', orderData);
                 
-                // Calculate totals
-                const subtotal = orderData.subtotal || 2000;
+                // Calculate totals from items (never use hardcoded fallback)
+                const subtotal = orderData.items
+                    ? orderData.items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
+                    : (orderData.subtotal || 0);
                 const tax = subtotal * 0.05;
                 const shipping = orderData.delivery_charge || 0;
                 const total = subtotal + tax + shipping;

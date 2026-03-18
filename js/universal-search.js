@@ -192,26 +192,24 @@ class UniversalSearch {
     selectProduct(productId, productName) {
         document.querySelectorAll('.main-search-bar').forEach(input => { input.value = productName; });
         document.querySelectorAll('.universal-search-dropdown').forEach(d => { d.style.display = 'none'; });
-        // Store product ID so shop.html can highlight it after load
-        sessionStorage.setItem('selectedProductId', String(productId));
-        sessionStorage.removeItem('searchTerm');
-        window.location.href = `shop.html?product=${productId}`;
+        // Navigate with search query param — shop.html will filter by name
+        const query = encodeURIComponent(productName);
+        window.location.href = `shop.html?search=${query}`;
     }
 
     viewProduct(productId) {
-        sessionStorage.setItem('selectedProductId', String(productId));
-        sessionStorage.removeItem('searchTerm');
         window.location.href = `shop.html?product=${productId}`;
     }
 
     performSearch(searchTerm) {
         if (!searchTerm) return;
-        sessionStorage.setItem('searchTerm', searchTerm);
-        sessionStorage.removeItem('selectedProductId');
+        const query = encodeURIComponent(searchTerm);
         if (!window.location.pathname.includes('shop.html')) {
-            window.location.href = 'shop.html';
-        } else if (window.displaySearchResults) {
-            window.displaySearchResults();
+            window.location.href = `shop.html?search=${query}`;
+        } else {
+            // Already on shop page — update URL and re-filter
+            window.history.replaceState(null, '', `shop.html?search=${query}`);
+            if (window.handleSearchNavigation) window.handleSearchNavigation();
         }
     }
 
