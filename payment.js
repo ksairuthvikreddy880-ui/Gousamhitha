@@ -497,24 +497,15 @@ function openCheckoutPayment(orderData) {
         orderItemsList.appendChild(itemDiv);
     });
     
-    // Use PaymentCalculator for clean calculation
-    console.log('🧮 Using PaymentCalculator for total calculation');
+    // Calculate totals immediately after modal opens
     if (window.paymentCalculator) {
         window.paymentCalculator.calculateFromOrderData(orderData);
     } else {
-        // Fallback calculation
         calculateAndDisplayTotal(orderData);
     }
-    
+
     document.getElementById('payment-modal').style.display = 'block';
     document.body.style.overflow = 'hidden';
-    
-    // EMERGENCY: Force correct total after a short delay
-    setTimeout(() => {
-        if (window.forceCorrectTotal) {
-            window.forceCorrectTotal();
-        }
-    }, 500);
 }
 
 // NEW: Clean calculation function
@@ -746,6 +737,10 @@ function closePaymentModal() {
     document.getElementById('payment-modal').style.display = 'none';
     document.body.style.overflow = 'auto';
     currentPaymentContext = null;
+
+    // Reset calculator so next open recalculates fresh
+    if (window.paymentCalculator) window.paymentCalculator.reset();
+    window.isPaymentCalculated = false;
     document.getElementById('payment-processing').style.display = 'none';
     document.getElementById('payment-success').style.display = 'none';
     document.querySelector('.payment-methods-section').style.display = 'block';
