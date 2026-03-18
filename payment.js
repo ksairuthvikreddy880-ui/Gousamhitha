@@ -62,40 +62,10 @@ const paymentModalHTML = `
                         <div class="payment-method-icon">📱</div>
                         <div class="payment-method-info">
                             <div class="payment-method-name">UPI</div>
-                            <div class="payment-method-desc">Paytm Payment</div>
+                            <div class="payment-method-desc">Pay via any UPI app (Paytm, GPay, PhonePe)</div>
                         </div>
                     </div>
                 </label>
-                <label class="payment-method-option">
-                    <input type="radio" name="payment-method" value="Scan">
-                    <div class="payment-method-card">
-                        <div class="payment-method-icon">📷</div>
-                        <div class="payment-method-info">
-                            <div class="payment-method-name">Scan to Pay</div>
-                            <div class="payment-method-desc">QR Code Payment</div>
-                        </div>
-                    </div>
-                </label>
-                <!-- UPI Options (shown when UPI is selected) -->
-                <div id="upi-options" class="upi-options" style="display: none; margin-left: 1rem; margin-top: 0.5rem;">
-                    <label class="upi-app-option">
-                        <input type="radio" name="upi-app" value="paytm">
-                        <div class="upi-app-card">
-                            <div class="upi-app-icon">💳</div>
-                            <div class="upi-app-name">Paytm</div>
-                        </div>
-                    </label>
-                    <label class="upi-app-option">
-                        <input type="radio" name="upi-app" value="manual">
-                        <div class="upi-app-card">
-                            <div class="upi-app-icon">✏️</div>
-                            <div class="upi-app-name">Enter UPI ID</div>
-                        </div>
-                    </label>
-                    <div id="manual-upi-input" style="display: none; margin-top: 0.5rem;">
-                        <input type="text" id="upi-id-input" placeholder="Enter your UPI ID (e.g., name@paytm)" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 0.95rem;">
-                    </div>
-                </div>
             </div>
             <div id="payment-processing" class="payment-processing" style="display: none;">
                 <div class="payment-spinner"></div>
@@ -482,30 +452,6 @@ function initializePaymentModal() {
     if (!document.getElementById('payment-modal')) {
         document.body.insertAdjacentHTML('beforeend', paymentModalStyles);
         document.body.insertAdjacentHTML('beforeend', paymentModalHTML);
-        
-        // Add event listeners for payment method selection
-        document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const upiOptions = document.getElementById('upi-options');
-                if (this.value === 'UPI') {
-                    upiOptions.style.display = 'block';
-                } else {
-                    upiOptions.style.display = 'none';
-                }
-            });
-        });
-        
-        // Add event listeners for UPI app selection
-        document.querySelectorAll('input[name="upi-app"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const manualInput = document.getElementById('manual-upi-input');
-                if (this.value === 'manual') {
-                    manualInput.style.display = 'block';
-                } else {
-                    manualInput.style.display = 'none';
-                }
-            });
-        });
     }
 }
 
@@ -794,11 +740,6 @@ function openDonationPayment(donationData) {
     const upiOption = document.querySelector('input[name="payment-method"][value="UPI"]');
     if (upiOption) {
         upiOption.checked = true;
-        // Show UPI options
-        const upiOptionsDiv = document.getElementById('upi-options');
-        if (upiOptionsDiv) {
-            upiOptionsDiv.style.display = 'block';
-        }
     }
     
     document.getElementById('payment-modal').style.display = 'block';
@@ -826,12 +767,10 @@ function closePaymentModal() {
     if (codRadio) {
         codRadio.checked = true;
     }
-    
-    // Hide UPI options
-    const upiOptionsDiv = document.getElementById('upi-options');
-    if (upiOptionsDiv) {
-        upiOptionsDiv.style.display = 'none';
-    }
+
+    // Remove any fallback UPI info if present
+    const fallback = document.getElementById('upi-fallback-info');
+    if (fallback) fallback.remove();
 }
 
 
@@ -858,45 +797,9 @@ async function processPayment() {
     
     const selectedMethod = selectedMethodElement.value;
     
-    // If UPI is selected, check if UPI app is selected
+    // If UPI is selected, handle directly
     if (selectedMethod === 'UPI') {
-        const selectedUpiApp = document.querySelector('input[name="upi-app"]:checked');
-        if (!selectedUpiApp) {
-            if (typeof showToast === 'function') {
-                showToast('Please select a UPI payment option.', 'error');
-            } else {
-                alert('Please select a UPI payment option.');
-            }
-            return;
-        }
-        
-        const upiApp = selectedUpiApp.value;
-        
-        // If manual UPI ID, validate input
-        if (upiApp === 'manual') {
-            const upiId = document.getElementById('upi-id-input').value.trim();
-            if (!upiId) {
-                if (typeof showToast === 'function') {
-                    showToast('Please enter your UPI ID.', 'error');
-                } else {
-                    alert('Please enter your UPI ID.');
-                }
-                return;
-            }
-            
-            // Validate UPI ID format
-            if (!upiId.includes('@')) {
-                if (typeof showToast === 'function') {
-                    showToast('Please enter a valid UPI ID (e.g., name@paytm).', 'error');
-                } else {
-                    alert('Please enter a valid UPI ID (e.g., name@paytm).');
-                }
-                return;
-            }
-        }
-        
-        // Handle UPI payment
-        handleUpiPayment(upiApp);
+        handleUpiPayment();
         return;
     }
     
@@ -931,94 +834,45 @@ async function processPayment() {
     }, 2000);
 }
 
-function handleUpiPayment(upiApp) {
+function handleUpiPayment() {
     const orderData = currentPaymentContext.data;
     const amount = orderData.finalTotal || orderData.total;
-    
-    // Your phone number (without +91)
-    const merchantPhone = '7893059116';
-    const merchantName = 'Gousamhitha';
-    const transactionNote = 'Order Payment';
-    
-    if (upiApp === 'manual') {
-        const upiId = document.getElementById('upi-id-input').value.trim();
-        if (typeof showToast === 'function') {
-            showToast('Please send ₹' + amount + ' to phone number: ' + merchantPhone, 'info');
-        } else {
-            alert('Please send ₹' + amount + ' to phone number: ' + merchantPhone);
-        }
-        processUpiPaymentCompletion();
-        return;
-    }
-    
-    // Build UPI payment URL
-    const upiString = `upi://pay?pa=${merchantPhone}@ybl&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
-    
-    // Detect if on mobile device
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    let paymentUrl = '';
-    
-    if (isMobile) {
-        // On mobile, try to open the app first
-        let appUrl = '';
-        
-        switch (upiApp) {
-            case 'phonepe':
-                appUrl = `phonepe://pay?pa=${merchantPhone}@ybl&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
-                break;
-            case 'googlepay':
-                appUrl = `tez://upi/pay?pa=${merchantPhone}@paytm&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
-                break;
-            case 'paytm':
-                appUrl = `paytmmp://pay?pa=${merchantPhone}@paytm&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
-                break;
-        }
-        
-        console.log('Opening mobile app:', appUrl);
-        window.location.href = appUrl;
-        
-    } else {
-        // On desktop/web, open web version
-        switch (upiApp) {
-            case 'phonepe':
-                // PhonePe web payment
-                paymentUrl = `https://phon.pe/ru_${merchantPhone}?amount=${amount}`;
-                break;
-            case 'googlepay':
-                // Google Pay web (opens UPI intent)
-                paymentUrl = `https://pay.google.com/gp/v/send?pa=${merchantPhone}@paytm&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
-                break;
-            case 'paytm':
-                // Paytm web payment
-                paymentUrl = `https://paytm.me/${merchantPhone}/${amount}`;
-                break;
-        }
-        
-        console.log('Opening web payment:', paymentUrl);
-        
-        // Open in new tab
-        window.open(paymentUrl, '_blank');
-        
-        if (typeof showToast === 'function') {
-            showToast('Payment page opened in new tab. Please complete the payment.', 'info');
-        }
-    }
-    
-    // After 5 seconds, ask for payment confirmation
+
+    const upiId = '7893059116@paytm';
+    const name = 'Gousamhitha';
+    const note = 'Order Payment';
+
+    const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+    console.log('UPI Link:', upiLink);
+
+    // Inform user before redirect
+    alert(`You will be redirected to your UPI app to complete payment of ₹${amount}.\n\nUPI ID: ${upiId}\nAmount: ₹${amount}\n\nThis works with Paytm, Google Pay, PhonePe and all UPI apps.`);
+
+    // Redirect to UPI deep link (opens any installed UPI app)
+    window.location.href = upiLink;
+
+    // Fallback: if redirect doesn't work, show manual details after 3 seconds
     setTimeout(() => {
-        const confirmed = confirm('Have you completed the payment of ₹' + amount + '?\n\nClick OK if payment is done\nClick Cancel if you want to try again');
-        if (confirmed) {
-            processUpiPaymentCompletion();
+        const fallbackDiv = document.getElementById('upi-fallback-info');
+        if (fallbackDiv) {
+            fallbackDiv.style.display = 'block';
         } else {
-            if (typeof showToast === 'function') {
-                showToast('Payment cancelled. Please try again.', 'error');
+            const body = document.querySelector('.payment-sidebar-body');
+            if (body) {
+                const info = document.createElement('div');
+                info.id = 'upi-fallback-info';
+                info.style.cssText = 'background:#f0f7f0;border:2px solid #4a7c59;border-radius:8px;padding:1.2rem;margin-top:1rem;text-align:center;';
+                info.innerHTML = `
+                    <p style="font-weight:600;color:#2e7d32;margin-bottom:0.5rem;">If app didn't open, pay manually:</p>
+                    <p style="font-size:1.1rem;margin:0.3rem 0;"><strong>UPI ID:</strong> ${upiId}</p>
+                    <p style="font-size:1.1rem;margin:0.3rem 0;"><strong>Amount:</strong> ₹${amount}</p>
+                    <p style="font-size:0.85rem;color:#666;margin-top:0.5rem;">After paying, click "I've Paid" below.</p>
+                    <button class="btn btn-primary" style="margin-top:1rem;width:100%;" onclick="processUpiPaymentCompletion()">I've Paid</button>
+                `;
+                body.appendChild(info);
             }
-            // Reset the modal so user can try again
-            document.querySelector('.payment-methods-section').style.display = 'block';
-            document.querySelector('.payment-sidebar-footer').style.display = 'flex';
         }
-    }, 5000);
+    }, 3000);
 }
 
 function processUpiPaymentCompletion() {
