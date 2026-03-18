@@ -520,18 +520,19 @@ function openCheckoutPayment(orderData) {
 // NEW: Clean calculation function
 function calculateAndDisplayTotal(orderData) {
     console.log('🧮 Starting fresh calculation with orderData:', orderData);
-    
-    // Use pre-calculated subtotal from checkout if available
+    console.log('Items:', orderData.items);
+
+    // Always compute from raw item data
     let subtotal = 0;
-    if (orderData.subtotal && orderData.subtotal > 0) {
-        subtotal = orderData.subtotal;
-    } else if (orderData.items && orderData.items.length > 0) {
+    if (orderData.items && orderData.items.length > 0) {
         subtotal = orderData.items.reduce((sum, item) => {
-            const itemTotal = item.price * item.quantity;
-            console.log(`Item: ${item.name}, Price: ₹${item.price}, Qty: ${item.quantity}, Total: ₹${itemTotal}`);
-            return sum + itemTotal;
+            const unitPrice = Number(item.price) || 0;
+            const quantity = Number(item.quantity) || 0;
+            return sum + (unitPrice * quantity);
         }, 0);
     }
+
+    console.log('Subtotal:', subtotal);
     
     // Step 2: Calculate tax (5% of subtotal)
     const tax = subtotal * 0.05;
@@ -596,27 +597,9 @@ window.recalculatePaymentTotal = function() {
     }
 };
 
-// NEW: Emergency total fix function
 window.fixPaymentTotal = function() {
     console.log('🚨 Emergency total fix triggered');
-    
-    // Try to recalculate first
-    const calculatedTotal = window.recalculatePaymentTotal();
-    
-    if (calculatedTotal > 0) {
-        return calculatedTotal;
-    }
-    
-    // Fallback: Manual calculation
-    const subtotal = 2000; // Based on your cart items
-    const tax = subtotal * 0.05;
-    const shipping = 0;
-    const total = subtotal + tax + shipping;
-    
-    updatePaymentUI(subtotal, tax, shipping, total);
-    
-    console.log('🚨 Emergency fix applied with total:', total);
-    return total;
+    return window.recalculatePaymentTotal();
 };
 
 

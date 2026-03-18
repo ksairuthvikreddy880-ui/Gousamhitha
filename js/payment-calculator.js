@@ -48,70 +48,45 @@ class PaymentCalculator {
     
     calculateFromOrderData(orderData) {
         console.log('💳 Calculating from order data:', orderData);
-        
-        if (!orderData) {
-            console.log('⚠️ No order data provided');
+        console.log('Items:', orderData ? orderData.items : null);
+
+        if (!orderData || !orderData.items || orderData.items.length === 0) {
+            console.log('⚠️ No items in order data, cannot calculate');
             return 0;
         }
 
-        // Use pre-calculated subtotal from checkout if available
-        if (orderData.subtotal && orderData.subtotal > 0) {
-            this.subtotal = orderData.subtotal;
-        } else if (orderData.items && orderData.items.length > 0) {
-            // Recalculate from items as fallback
-            this.subtotal = orderData.items.reduce((sum, item) => {
-                const itemTotal = (item.price || 0) * (item.quantity || 0);
-                console.log(`Item: ${item.name}, ₹${item.price} × ${item.quantity} = ₹${itemTotal}`);
-                return sum + itemTotal;
-            }, 0);
-        } else {
-            console.log('⚠️ No items or subtotal in order data');
-            return 0;
-        }
-        
-        // Calculate tax
+        // Always compute from raw item data
+        this.subtotal = orderData.items.reduce((sum, item) => {
+            const unitPrice = Number(item.price) || 0;
+            const quantity = Number(item.quantity) || 0;
+            return sum + (unitPrice * quantity);
+        }, 0);
+
+        console.log('Subtotal:', this.subtotal);
+
         this.tax = this.subtotal * this.taxRate;
-        
-        // Set shipping
         this.shipping = orderData.delivery_charge || 0;
-        
-        // Calculate total
         this.total = this.subtotal + this.tax + this.shipping;
-        
+
         console.log('💳 Calculation complete:', {
             subtotal: this.subtotal,
             tax: this.tax,
             shipping: this.shipping,
             total: this.total
         });
-        
+
         this.updateUI();
         return this.total;
     }
     
     calculateFallback() {
-        console.log('💳 Using fallback calculation');
-        
-        // Based on your current cart items
-        const fallbackItems = [
-            { name: 'Pencil image', price: 500, quantity: 2 },
-            { name: 'paneer', price: 1000, quantity: 1 }
-        ];
-        
-        this.subtotal = fallbackItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        this.tax = this.subtotal * this.taxRate;
+        console.log('💳 Fallback: no items available, subtotal = 0');
+        this.subtotal = 0;
+        this.tax = 0;
         this.shipping = 0;
-        this.total = this.subtotal + this.tax + this.shipping;
-        
-        console.log('💳 Fallback calculation:', {
-            subtotal: this.subtotal,
-            tax: this.tax,
-            shipping: this.shipping,
-            total: this.total
-        });
-        
+        this.total = 0;
         this.updateUI();
-        return this.total;
+        return 0;
     }
     
     updateUI() {
