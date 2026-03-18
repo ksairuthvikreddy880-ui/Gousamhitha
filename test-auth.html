@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication System Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #4a7c59; }
+        h2 { color: #666; font-size: 18px; margin-top: 0; }
+        button {
+            background: #4a7c59;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #3a5c49; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Authentication System Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Backend Connection</h2>
+        <button onclick="testBackendConnection()">Test Backend</button>
+        <div id="backend-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Sign Up Test</h2>
+        <input type="email" id="signup-email" placeholder="Email" value="testuser@example.com">
+        <input type="password" id="signup-password" placeholder="Password" value="password123">
+        <input type="text" id="signup-name" placeholder="Full Name" value="Test User">
+        <input type="tel" id="signup-phone" placeholder="Phone" value="9876543210">
+        <button onclick="testSignUp()">Sign Up</button>
+        <div id="signup-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Sign In Test</h2>
+        <input type="email" id="signin-email" placeholder="Email" value="testuser@example.com">
+        <input type="password" id="signin-password" placeholder="Password" value="password123">
+        <button onclick="testSignIn()">Sign In</button>
+        <div id="signin-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Get Profile Test</h2>
+        <button onclick="testGetProfile()">Get Profile</button>
+        <div id="profile-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Logout Test</h2>
+        <button onclick="testLogout()">Logout</button>
+        <div id="logout-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Cookie Check</h2>
+        <button onclick="checkCookies()">Check Cookies</button>
+        <div id="cookie-result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        async function testBackendConnection() {
+            const resultDiv = document.getElementById('backend-result');
+            try {
+                const response = await fetch('http://localhost:5000/', { method: 'GET' });
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `<p class="success">✅ Backend Connected</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Backend Error: ${response.status}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Connection Failed: ${error.message}</p>`;
+            }
+        }
+
+        async function testSignUp() {
+            const resultDiv = document.getElementById('signup-result');
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const name = document.getElementById('signup-name').value;
+            const phone = document.getElementById('signup-phone').value;
+
+            try {
+                resultDiv.innerHTML = '<p class="info">⏳ Signing up...</p>';
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        first_name: name.split(' ')[0],
+                        last_name: name.split(' ').slice(1).join(' '),
+                        phone
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p class="success">✅ Signup Successful</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Signup Failed: ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testSignIn() {
+            const resultDiv = document.getElementById('signin-result');
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+
+            try {
+                resultDiv.innerHTML = '<p class="info">⏳ Signing in...</p>';
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p class="success">✅ Login Successful</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Login Failed: ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testGetProfile() {
+            const resultDiv = document.getElementById('profile-result');
+
+            try {
+                resultDiv.innerHTML = '<p class="info">⏳ Fetching profile...</p>';
+                const response = await fetch(`${API_URL}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p class="success">✅ Profile Fetched</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Failed: ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testLogout() {
+            const resultDiv = document.getElementById('logout-result');
+
+            try {
+                resultDiv.innerHTML = '<p class="info">⏳ Logging out...</p>';
+                const response = await fetch(`${API_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p class="success">✅ Logout Successful</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Failed: ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        function checkCookies() {
+            const resultDiv = document.getElementById('cookie-result');
+            const cookies = document.cookie;
+            if (cookies) {
+                resultDiv.innerHTML = `<p class="success">✅ Cookies Found</p><pre>${cookies}</pre>`;
+            } else {
+                resultDiv.innerHTML = `<p class="info">ℹ️ No cookies found (HTTP-only cookies are not visible to JavaScript)</p>`;
+            }
+        }
+
+        // Test on load
+        window.addEventListener('load', () => {
+            console.log('Test page loaded');
+        });
+    </script>
+</body>
+</html>

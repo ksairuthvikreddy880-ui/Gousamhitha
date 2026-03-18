@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Image Upload - Admin</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px dashed #4a7c59;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        button {
+            background: #4a7c59;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+        }
+        button:hover {
+            background: #2e7d32;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .error { background: #ffebee; color: #c62828; }
+        .info { background: #e3f2fd; color: #1976d2; }
+        .warning { background: #fff3e0; color: #f57c00; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🖼️ Image Upload Test</h1>
+        <p>This page tests the image upload functionality for the admin panel.</p>
+        
+        <div class="form-group">
+            <label for="test-image">Select Test Image:</label>
+            <input type="file" id="test-image" accept="image/*">
+        </div>
+        
+        <div class="form-group">
+            <button onclick="testSupabaseUpload()" id="supabase-btn">Test Supabase Storage Upload</button>
+            <button onclick="testBase64Conversion()" id="base64-btn">Test Base64 Conversion</button>
+            <button onclick="testBothMethods()" id="both-btn">Test Both Methods</button>
+        </div>
+        
+        <div id="preview" class="preview" style="display: none;"></div>
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <!-- Load Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-client.js?v=11"></script>
+    <script src="js/admin-image-update-fix.js"></script>
+    
+    <script>
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function showPreview(imageUrl, title) {
+            const preview = document.getElementById('preview');
+            preview.style.display = 'block';
+            preview.innerHTML = `
+                <h3>${title}</h3>
+                <img src="${imageUrl}" alt="Preview" style="max-width: 300px; border-radius: 8px;">
+                <p><strong>URL:</strong> <code style="word-break: break-all;">${imageUrl}</code></p>
+            `;
+        }
+        
+        async function testSupabaseUpload() {
+            const fileInput = document.getElementById('test-image');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('Please select an image file first', 'error');
+                return;
+            }
+            
+            showStatus('Testing Supabase Storage upload...', 'info');
+            
+            try {
+                // Check if Supabase is available
+                if (!window.supabase) {
+                    throw new Error('Supabase client not available');
+                }
+                
+                if (!window.supabase.storage) {
+                    throw new Error('Supabase storage not available');
+                }
+                
+                // Generate unique filename
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const fileName = `test_${Date.now()}.${fileExt}`;
+                const filePath = `products/${fileName}`;
+                
+                console.log('Uploading to:', filePath);
+                
+                // Upload file
+                const { data: uploadData, error: uploadError } = await window.supabase.storage
+                    .from('product-images')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (uploadError) {
+                    throw new Error(`Upload failed: ${uploadError.message}`);
+                }
+                
+                console.log('Upload successful:', uploadData);
+                
+                // Get public URL
+                const { data: urlData } = window.supabase.storage
+                    .from('product-images')
+                    .getPublicUrl(filePath);
+                
+                if (!urlData || !urlData.publicUrl) {
+                    throw new Error('Failed to get public URL');
+                }
+                
+                showStatus('✅ Supabase upload successful!', 'success');
+                showPreview(urlData.publicUrl, '🗄️ Supabase Storage Result');
+                
+            } catch (error) {
+                console.error('Supabase upload error:', error);
+                showStatus(`❌ Supabase upload failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testBase64Conversion() {
+            const fileInput = document.getElementById('test-image');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('Please select an image file first', 'error');
+                return;
+            }
+            
+            showStatus('Testing Base64 conversion...', 'info');
+            
+            try {
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                
+                showStatus('✅ Base64 conversion successful!', 'success');
+                showPreview(base64, '📄 Base64 Result');
+                
+            } catch (error) {
+                console.error('Base64 conversion error:', error);
+                showStatus(`❌ Base64 conversion failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testBothMethods() {
+            const fileInput = document.getElementById('test-image');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('Please select an image file first', 'error');
+                return;
+            }
+            
+            showStatus('Testing both methods...', 'info');
+            
+            // Test Supabase first
+            try {
+                await testSupabaseUpload();
+                showStatus('✅ Supabase method works! Using Supabase for image storage.', 'success');
+            } catch (error) {
+                console.log('Supabase failed, trying Base64...');
+                try {
+                    await testBase64Conversion();
+                    showStatus('⚠️ Supabase failed, but Base64 works. Will use Base64 as fallback.', 'warning');
+                } catch (base64Error) {
+                    showStatus('❌ Both methods failed! Check console for details.', 'error');
+                }
+            }
+        }
+        
+        // Auto-test when file is selected
+        document.getElementById('test-image').addEventListener('change', function() {
+            if (this.files[0]) {
+                showStatus(`File selected: ${this.files[0].name} (${(this.files[0].size / 1024).toFixed(1)} KB)`, 'info');
+            }
+        });
+        
+        // Wait for Supabase to be ready
+        window.addEventListener('supabaseReady', () => {
+            showStatus('✅ Supabase client ready for testing', 'success');
+        });
+        
+        // Also check after delay
+        setTimeout(() => {
+            if (window.supabase) {
+                showStatus('✅ Supabase client loaded and ready', 'success');
+            } else {
+                showStatus('⚠️ Supabase client not available - only Base64 method will work', 'warning');
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

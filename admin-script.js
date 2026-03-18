@@ -1,0 +1,1900 @@
+
+
+(function() {
+    const CLEAR_FLAG = 'dummy_data_cleared_v1';
+    if (!localStorage.getItem(CLEAR_FLAG)) {
+        console.log('Admin: Clearing all dummy data...');
+        localStorage.removeItem('products');
+        localStorage.removeItem('orders');
+        localStorage.setItem('products', JSON.stringify([]));
+        localStorage.setItem('orders', JSON.stringify([]));
+        localStorage.setItem(CLEAR_FLAG, 'true');
+        console.log('Admin: Dummy data cleared. System ready for real data.');
+    }
+})();
+
+
+
+function initializeAdminData() {
+    console.log('Clearing localStorage to use Supabase database only...');
+    localStorage.removeItem('products');
+    localStorage.removeItem('orders');
+    localStorage.removeItem('vendors');
+    localStorage.removeItem('categories');
+    console.log('localStorage cleared - using Supabase database');
+}
+
+
+function handleAdminLogin(event) {
+    event.preventDefault();
+    const email = document.getElementById('admin-email').value;
+    const password = document.getElementById('admin-password').value;
+    const messageEl = document.getElementById('login-message');
+    if (email === 'ruthvik@blockfortrust.com' && password === 'Saireddy880227') {
+        localStorage.setItem('adminLoggedIn', 'true');
+        messageEl.textContent = 'Login successful! Redirecting...';
+        messageEl.className = 'login-message success';
+        setTimeout(() => {
+            window.location.href = 'admin-dashboard.html';
+        }, 1000);
+    } else {
+        messageEl.textContent = 'Invalid credentials';
+        messageEl.className = 'login-message error';
+    }
+}
+
+
+async function adminLogout() {
+    const confirmLogout = confirm('Are you sure you want to logout?\n\nClick OK to logout or Cancel to stay.');
+    if (confirmLogout) {
+
+        if (typeof handleSignOut === 'function') {
+            await handleSignOut();
+        } else {
+
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('adminLoggedIn');
+            window.location.href = 'index.html';
+        }
+    }
+}
+
+
+function vendorLogout() {
+    logout();
+}
+
+
+async function loadDashboard() {
+    try {
+        const { data: products, error: productsError } = await window.supabase
+            .from('products')
+            .select('*');
+        const { data: orders, error: ordersError } = await window.supabase
+            .from('orders')
+            .select('*');
+        const { data: vendors, error: vendorsError } = await window.supabase
+            .from('vendors')
+            .select('*');
+        const productsList = products || [];
+        const ordersList = orders || [];
+        const vendorsList = vendors || [];
+        const outOfStock = productsList.filter(p => !p.in_stock || p.stock === 0).length;
+        document.getElementById('total-products').textContent = productsList.length;
+        document.getElementById('total-vendors').textContent = vendorsList.length;
+        document.getElementById('total-orders').textContent = ordersList.length;
+        document.getElementById('out-of-stock').textContent = outOfStock;
+        loadVendorsList();
+        const recentOrdersList = document.getElementById('recent-orders-list');
+        if (recentOrdersList) {
+            const recentOrders = ordersList.slice(0, 5);
+            recentOrdersList.innerHTML = recentOrders.map(order => `
+                <div style="padding: 1rem; border-bottom: 1px solid #eee;">
+                    <strong>${order.id}</strong> - ${order.customer_email} - ₹${order.total} - ${order.status}
+                </div>
+            `).join('') || '<p>No orders yet</p>';
+        }
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+    }
+}
+
+
+async function loadVendorsList() {
+    const tbody = document.getElementById('vendors-list-body');
+    if (!tbody) return;
+    try {
+        const { data: vendors, error: vendorsError } = await window.supabase
+            .from('vendors')
+            .select('*')
+            .order('created_at', { ascending: false });
+        const { data: products, error: productsError } = await window.supabase
+            .from('products')
+            .select('vendor_id');
+        if (vendorsError) {
+            console.error('Error fetching vendors:', vendorsError);
+            tbody.innerHTML = '<tr><td colspan="6">Error loading vendors</td></tr>';
+            return;
+        }
+        if (!vendors || vendors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">No vendors yet</td></tr>';
+            return;
+        }
+        const productsList = products || [];
+        tbody.innerHTML = vendors.map(vendor => {
+            const vendorProducts = productsList.filter(p => p.vendor_id === vendor.id);
+            const createdDate = vendor.created_at ? new Date(vendor.created_at).toLocaleDateString() : 'N/A';
+            return `
+                <tr>
+                    <td>${vendor.vendor_name}</td>
+                    <td>${vendor.business_name}</td>
+                    <td>${vendor.phone || 'N/A'}</td>
+                    <td><span class="status-badge in-stock">active</span></td>
+                    <td>${vendorProducts.length}</td>
+                    <td>${createdDate}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error loading vendors:', error);
+        tbody.innerHTML = '<tr><td colspan="6">Error loading vendors</td></tr>';
+    }
+}
+
+
+function openAddVendorModal() {
+    document.getElementById('add-vendor-panel').classList.add('active');
+}
+
+
+function closeAddVendorModal() {
+    document.getElementById('add-vendor-panel').classList.remove('active');
+    document.getElementById('add-vendor-form').reset();
+    document.getElementById('add-vendor-message').textContent = '';
+    document.getElementById('add-vendor-message').className = 'form-message';
+}
+
+
+async function handleAddVendor(event) {
+    event.preventDefault();
+    const vendorName = document.getElementById('new-vendor-name').value;
+    const businessName = document.getElementById('new-business-name').value;
+    const phone = document.getElementById('new-vendor-phone').value;
+    const address = document.getElementById('new-vendor-address').value;
+    const messageEl = document.getElementById('add-vendor-message');
+    messageEl.textContent = 'Creating vendor...';
+    messageEl.className = 'form-message';
+    const newVendor = {
+        vendor_name: vendorName,
+        business_name: businessName,
+        phone: phone || '',
+        address: address || ''
+    };
+    try {
+        const { data, error } = await window.supabase
+            .from('vendors')
+            .insert([newVendor])
+            .select();
+        if (error) {
+            console.error('Error adding vendor:', error);
+            messageEl.textContent = 'Error adding vendor: ' + error.message;
+            messageEl.className = 'form-message error';
+            return;
+        }
+        messageEl.textContent = 'Vendor created successfully!';
+        messageEl.className = 'form-message success';
+        setTimeout(() => {
+            closeAddVendorModal();
+            loadDashboard();
+        }, 1500);
+    } catch (error) {
+        console.error('Error adding vendor:', error);
+        messageEl.textContent = 'Error adding vendor. Please try again.';
+        messageEl.className = 'form-message error';
+    }
+}
+
+
+async function loadProductsTable() {
+    const tbody = document.getElementById('products-table-body');
+    if (!tbody) {
+        console.error('❌ products-table-body element not found in DOM');
+        return;
+    }
+    
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading products...</td></tr>';
+    
+    console.log('=== LOADING PRODUCTS TABLE ===');
+    console.log('1. Checking Supabase client...');
+    
+    if (typeof window.supabase === 'undefined') {
+        console.error('❌ Supabase client not available!');
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">Database connection not available. Please refresh the page.</td></tr>';
+        return;
+    }
+    
+    console.log('✓ Supabase client is available');
+    console.log('2. Fetching products from Supabase database...');
+    
+    try {
+        const { data: products, error } = await window.supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        console.log('3. Supabase query completed');
+        
+        if (error) {
+            console.error('❌ Error fetching products:', error);
+            console.error('   - Error message:', error.message);
+            console.error('   - Error code:', error.code);
+            console.error('   - Error details:', error.details);
+            console.error('   - Error hint:', error.hint);
+            
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">
+                <strong>Error loading products:</strong><br>
+                ${error.message}<br>
+                <small>Code: ${error.code || 'N/A'}</small><br>
+                <small>Details: ${error.details || 'N/A'}</small><br>
+                <small>Hint: ${error.hint || 'Check if the products table exists and RLS policies allow SELECT'}</small><br><br>
+                <button onclick="loadProductsTable()" class="btn-primary">Retry</button>
+            </td></tr>`;
+            return;
+        }
+        
+        console.log('✅ Fetched products:', products);
+        console.log('   - Products count:', products ? products.length : 0);
+        
+        if (!products || products.length === 0) {
+            console.log('ℹ️ No products found in database');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No products yet. Click "Add New Product" to add your first product.</td></tr>';
+            return;
+        }
+        
+        console.log('4. Rendering', products.length, 'products in table...');
+        
+        tbody.innerHTML = products.map(product => {
+            console.log('   - Rendering:', product.name, 'ID:', product.id);
+            return `
+            <tr>
+                <td><img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" class="product-image-small" onerror="this.src='images/placeholder.png'"></td>
+                <td>${product.name}</td>
+                <td>${product.category}</td>
+                <td>₹${product.price}</td>
+                <td>${product.stock}</td>
+                <td><span class="status-badge ${product.in_stock ? 'in-stock' : 'out-of-stock'}">${product.in_stock ? 'In Stock' : 'Out of Stock'}</span></td>
+                <td>
+                    <button class="action-btn btn-edit" onclick="editProduct('${product.id}')">Edit</button>
+                    <button class="action-btn btn-delete" onclick="deleteProduct('${product.id}')">Delete</button>
+                    <button class="action-btn btn-toggle" onclick="toggleStock('${product.id}')">${product.in_stock ? 'Mark Out' : 'Mark In'}</button>
+                </td>
+            </tr>
+        `}).join('');
+        
+        console.log('✅ Products table rendered successfully');
+        console.log('=== PRODUCTS TABLE LOAD COMPLETE ===');
+    } catch (error) {
+        console.error('❌ Exception while loading products:', error);
+        console.error('   - Error name:', error.name);
+        console.error('   - Error message:', error.message);
+        console.error('   - Error stack:', error.stack);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">
+            <strong>Error loading products:</strong><br>
+            ${error.message}<br><br>
+            <button onclick="loadProductsTable()" class="btn-primary">Retry</button>
+        </td></tr>`;
+    }
+}
+
+
+async function deleteProduct(id) {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    try {
+        const { error } = await window.supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
+        if (error) {
+            console.error('Error deleting product:', error);
+            showToast('Error deleting product: ' + error.message, 'error');
+            return;
+        }
+        showToast('Product deleted successfully!');
+        loadProductsTable();
+    } catch (error) {
+        console.error('Error deleting product:', error);
+        showToast('Error deleting product. Please try again.', 'error');
+    }
+}
+
+
+async function toggleStock(id) {
+    try {
+        const { data: product, error: fetchError } = await window.supabase
+            .from('products')
+            .select('in_stock')
+            .eq('id', id)
+            .single();
+        if (fetchError) {
+            console.error('Error fetching product:', fetchError);
+            showToast('Error updating stock status', 'error');
+            return;
+        }
+        const { error: updateError } = await window.supabase
+            .from('products')
+            .update({ in_stock: !product.in_stock })
+            .eq('id', id);
+        if (updateError) {
+            console.error('Error updating stock:', updateError);
+            showToast('Error updating stock status', 'error');
+            return;
+        }
+        loadProductsTable();
+    } catch (error) {
+        console.error('Error toggling stock:', error);
+        showToast('Error updating stock status. Please try again.', 'error');
+    }
+}
+
+
+async function editProduct(id) {
+    try {
+        const { data: vendors } = await window.supabase
+            .from('vendors')
+            .select('id, business_name')
+            .order('business_name');
+        
+        const vendorSelect = document.getElementById('edit-vendor');
+        vendorSelect.innerHTML = '<option value="">Select Vendor</option>' + 
+            (vendors || []).map(v => `<option value="${v.id}">${v.business_name}</option>`).join('');
+        
+        const { data: product, error } = await window.supabase
+            .from('products')
+            .select('*')
+            .eq('id', id)
+            .single();
+        
+        if (error || !product) {
+            console.error('Error fetching product:', error);
+            showToast('Error loading product details', 'error');
+            return;
+        }
+        
+        document.getElementById('edit-product-id').value = product.id;
+        document.getElementById('edit-name').value = product.name;
+        document.getElementById('edit-category').value = product.category;
+        document.getElementById('edit-subcategory').value = product.subcategory || '';
+        document.getElementById('edit-vendor').value = product.vendor_id || '';
+        document.getElementById('edit-price').value = product.price;
+        document.getElementById('edit-stock').value = product.stock;
+        document.getElementById('edit-unit').value = product.unit || 'piece';
+        document.getElementById('edit-unit-quantity').value = product.unit_quantity || '';
+        document.getElementById('edit-display-unit').value = product.display_unit || '';
+        document.getElementById('edit-description').value = product.description || '';
+        
+        const currentImageDiv = document.getElementById('edit-current-image');
+        currentImageDiv.innerHTML = `<img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" style="max-width: 150px; border-radius: 8px;">`;
+        
+        document.getElementById('edit-overlay').classList.add('active');
+        document.getElementById('edit-panel').classList.add('active');
+    } catch (error) {
+        console.error('Error loading product:', error);
+        showToast('Error loading product details', 'error');
+    }
+}
+
+
+function closeEditPanel() {
+    document.getElementById('edit-overlay').classList.remove('active');
+    document.getElementById('edit-panel').classList.remove('active');
+    document.getElementById('edit-product-form').reset();
+}
+
+
+async function saveProductEdit(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('edit-product-id').value;
+    const name = document.getElementById('edit-name').value.trim();
+    const category = document.getElementById('edit-category').value;
+    const subcategory = document.getElementById('edit-subcategory').value.trim();
+    const vendorId = document.getElementById('edit-vendor').value;
+    const price = parseFloat(document.getElementById('edit-price').value);
+    const stock = parseInt(document.getElementById('edit-stock').value);
+    const unit = document.getElementById('edit-unit').value;
+    const unitQuantity = document.getElementById('edit-unit-quantity').value;
+    const displayUnit = document.getElementById('edit-display-unit').value.trim();
+    const description = document.getElementById('edit-description').value.trim();
+    const imageInput = document.getElementById('edit-image');
+    
+    const updatedProduct = {
+        name,
+        category,
+        subcategory: subcategory || null,
+        vendor_id: vendorId || null,
+        price,
+        stock,
+        unit: unit || 'piece',
+        unit_quantity: unitQuantity ? parseFloat(unitQuantity) : null,
+        display_unit: displayUnit || null,
+        description: description || null,
+        in_stock: stock > 0
+    };
+    
+    if (imageInput.files && imageInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            updatedProduct.image_url = e.target.result;
+            await updateProductInDatabase(id, updatedProduct);
+        };
+        reader.readAsDataURL(imageInput.files[0]);
+    } else {
+        await updateProductInDatabase(id, updatedProduct);
+    }
+}
+
+async function updateProductInDatabase(id, updatedProduct) {
+    try {
+        console.log('Updating product:', id);
+        console.log('Update data:', updatedProduct);
+        
+        const { data, error } = await window.supabase
+            .from('products')
+            .update(updatedProduct)
+            .eq('id', id)
+            .select();
+        
+        if (error) {
+            console.error('Error updating product:', error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            showToast('Error updating product: ' + (error.message || JSON.stringify(error)), 'error');
+            return;
+        }
+        
+        console.log('Product updated successfully:', data);
+        showToast('Product updated successfully!');
+        closeEditPanel();
+        loadProductsTable();
+    } catch (error) {
+        console.error('Error updating product:', error);
+        console.error('Error stack:', error.stack);
+        showToast('Error updating product: ' + error.message, 'error');
+    }
+}
+
+
+let imageBase64 = '';
+function previewImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('image-preview');
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imageBase64 = e.target.result;
+            window.imageBase64 = imageBase64;
+            preview.innerHTML = `
+                <div style="margin-top: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px; text-align: center;">
+                    <p style="margin-bottom: 0.5rem; font-weight: 600; color: #4a7c59;">Image Preview:</p>
+                    <img src="${imageBase64}" alt="Preview" style="max-width: 300px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.innerHTML = '';
+        imageBase64 = '';
+        window.imageBase64 = '';
+    }
+}
+
+
+async function loadVendorsDropdown() {
+    const vendorSelect = document.getElementById('product-vendor');
+    if (!vendorSelect) {
+        console.error('Vendor dropdown element not found!');
+        return;
+    }
+    
+    console.log('Loading vendors dropdown...');
+    
+    try {
+        const { data: vendors, error } = await window.supabase
+            .from('vendors')
+            .select('id, vendor_name, business_name')
+            .eq('status', 'active')
+            .order('vendor_name');
+        
+        if (error) {
+            console.error('Error loading vendors:', error);
+            vendorSelect.innerHTML = '<option value="">Error loading vendors</option>';
+            return;
+        }
+        
+        console.log('Vendors fetched:', vendors);
+        
+        vendorSelect.innerHTML = '<option value="">Select Vendor</option>';
+        
+        if (vendors && vendors.length > 0) {
+            vendors.forEach(vendor => {
+                const option = document.createElement('option');
+                option.value = vendor.id;
+                option.textContent = `${vendor.vendor_name} - ${vendor.business_name}`;
+                vendorSelect.appendChild(option);
+            });
+            console.log('✓ Loaded', vendors.length, 'vendors into dropdown');
+        } else {
+            console.log('⚠ No vendors found in database');
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No vendors available - Add vendors first';
+            vendorSelect.appendChild(option);
+        }
+    } catch (error) {
+        console.error('Exception loading vendors:', error);
+        vendorSelect.innerHTML = '<option value="">Error loading vendors</option>';
+    }
+}
+
+
+async function handleAddProduct(event) {
+    event.preventDefault();
+    
+    console.log('=== ADD PRODUCT FORM SUBMITTED ===');
+    
+    const name = document.getElementById('product-name').value.trim();
+    const category = document.getElementById('product-category').value;
+    const subcategory = document.getElementById('product-subcategory').value.trim();
+    const price = parseFloat(document.getElementById('product-price').value);
+    const stock = parseInt(document.getElementById('product-stock').value);
+    const unit = document.getElementById('product-unit').value;
+    const unitQuantity = parseFloat(document.getElementById('product-unit-quantity').value);
+    const description = document.getElementById('product-description').value.trim();
+    const vendorId = document.getElementById('product-vendor').value;
+    const messageEl = document.getElementById('form-message');
+    
+    console.log('Form values collected:', { name, category, price, stock, unit, unitQuantity });
+    
+    if (!name || !category || !price || !stock || !unit || !unitQuantity) {
+        console.error('Validation failed - missing required fields');
+        messageEl.textContent = 'Please fill in all required fields';
+        messageEl.className = 'form-message error';
+        return;
+    }
+    
+    if (typeof window.supabase === 'undefined') {
+        // Using backend API instead
+        messageEl.textContent = 'Database connection error. Please refresh the page.';
+        messageEl.className = 'form-message error';
+        return;
+    }
+    
+    messageEl.textContent = 'Adding product...';
+    messageEl.className = 'form-message';
+    
+    const displayUnit = unitQuantity + unit;
+    
+    const newProduct = {
+        name,
+        category,
+        subcategory: subcategory || null,
+        price,
+        stock,
+        unit,
+        unit_quantity: unitQuantity,
+        display_unit: displayUnit,
+        vendor_id: vendorId || null,
+        image_url: imageBase64 || 'images/placeholder.png',
+        description: description || null,
+        in_stock: stock > 0
+    };
+    
+    console.log('=== INSERTING PRODUCT INTO SUPABASE ===');
+    console.log('Product data:', JSON.stringify(newProduct, null, 2));
+    
+    try {
+        const { data, error } = await window.supabase
+            .from('products')
+            .insert([newProduct])
+            .select();
+        
+        console.log('Supabase response received');
+        console.log('Data:', data);
+        console.log('Error:', error);
+        
+        if (error) {
+            console.error('❌ Supabase insert error:', error);
+            console.error('Error message:', error.message);
+            console.error('Error code:', error.code);
+            console.error('Error details:', error.details);
+            messageEl.textContent = `Error adding product: ${error.message}`;
+            messageEl.className = 'form-message error';
+            return;
+        }
+        
+        if (!data || data.length === 0) {
+            console.error('❌ No data returned from insert');
+            messageEl.textContent = 'Product may not have been saved. Please check the products page.';
+            messageEl.className = 'form-message error';
+            return;
+        }
+        
+        console.log('✅ Product successfully inserted!');
+        console.log('Inserted product:', JSON.stringify(data[0], null, 2));
+        console.log('Product ID:', data[0].id);
+        
+        messageEl.textContent = 'Product added successfully! Redirecting...';
+        messageEl.className = 'form-message success';
+        
+        document.getElementById('add-product-form').reset();
+        document.getElementById('image-preview').innerHTML = '';
+        imageBase64 = '';
+        
+        setTimeout(() => {
+            console.log('Redirecting to products page...');
+            window.location.href = 'admin-products.html';
+        }, 1500);
+    } catch (error) {
+        console.error('❌ Exception while adding product:', error);
+        console.error('Exception details:', error.message, error.stack);
+        messageEl.textContent = 'Error adding product. Please try again.';
+        messageEl.className = 'form-message error';
+    }
+}
+
+
+async function loadOrdersTable() {
+    console.log('=== LOADING ORDERS TABLE ===');
+    const tbody = document.getElementById('orders-table-body');
+    if (!tbody) {
+        console.error('orders-table-body element not found');
+        return;
+    }
+    
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading orders...</td></tr>';
+    
+    if (!window.supabase) {
+        // Using backend API instead
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #d32f2f;">Database not connected. Please refresh the page.</td></tr>';
+        return;
+    }
+    
+    try {
+        console.log('Fetching orders from Supabase...');
+        const { data: orders, error } = await window.supabase
+            .from('orders')
+            .select('*, order_items(*)')
+            .order('created_at', { ascending: false });
+        
+        console.log('Fetched orders:', orders);
+        console.log('Fetch error:', error);
+        
+        if (error) {
+            console.error('Error fetching orders:', error);
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #d32f2f;">Error loading orders: ${error.message}</td></tr>`;
+            return;
+        }
+        
+        if (!orders || orders.length === 0) {
+            console.log('No orders found in database');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No orders yet</td></tr>';
+            return;
+        }
+        
+        console.log(`Rendering ${orders.length} orders`);
+        tbody.innerHTML = orders.map((order) => {
+            const items = order.order_items || [];
+            const itemsText = items.map(item => `${item.product_name} (${item.quantity})`).join(', ');
+            const orderDate = new Date(order.created_at).toLocaleDateString();
+            const shortId = order.id.substring(0, 8);
+            
+            const locationBtn = (order.latitude && order.longitude) 
+                ? `<button class="action-btn btn-view" onclick="viewLocation(${order.latitude}, ${order.longitude})" style="background: #2196F3; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85rem;">📍 View Location</button>`
+                : '<span style="color: #999; font-size: 0.85rem;">No location</span>';
+            
+            return `
+            <tr>
+                <td style="font-family: monospace; font-size: 0.9rem;">${shortId}</td>
+                <td>
+                    <div style="font-weight: 600;">${order.customer_name}</div>
+                    <div style="font-size: 0.85rem; color: #666;">${order.email || 'N/A'}</div>
+                </td>
+                <td>${order.phone}</td>
+                <td style="max-width: 200px;">
+                    <div style="font-size: 0.9rem;">${itemsText || 'No items'}</div>
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">${items.length} item(s)</div>
+                </td>
+                <td style="font-weight: 600; color: #4a7c59;">₹${order.total}</td>
+                <td>
+                    <div style="font-size: 0.9rem;">${order.payment_method}</div>
+                    <div style="font-size: 0.8rem;">
+                        <span style="color: ${order.payment_status === 'paid' ? '#4caf50' : '#ff9800'};">
+                            ${order.payment_status === 'paid' ? '✓ Paid' : '⏳ Pending'}
+                        </span>
+                    </div>
+                </td>
+                <td>${locationBtn}</td>
+                <td>
+                    ${order.order_status === 'Delivered' ? 
+                        `<button class="action-btn btn-delete" onclick="window.deleteOrder('${order.id}')" style="background: #dc3545; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85rem;">Delete</button>` : 
+                        `<span style="color: #999; font-size: 0.85rem;">After delivery</span>`
+                    }
+                </td>
+            </tr>
+        `}).join('');
+        console.log('Orders rendered successfully');
+    } catch (error) {
+        console.error('Exception in loadOrdersTable:', error);
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #d32f2f;">Error loading orders: ${error.message}</td></tr>`;
+    }
+}
+
+function viewLocation(lat, lng) {
+    const url = `https://www.google.com/maps?q=${lat},${lng}`;
+    window.open(url, '_blank');
+}
+
+window.viewLocation = viewLocation;
+
+
+async function updateOrderStatus(orderId, newStatus) {
+    console.log('=== UPDATING ORDER STATUS ===');
+    console.log('Order ID:', orderId);
+    console.log('Order ID type:', typeof orderId);
+    console.log('New Status:', newStatus);
+    
+    if (!window.supabase) {
+        // Using backend API instead
+        alert('Database connection error. Please refresh the page.');
+        return;
+    }
+    
+    try {
+        console.log('Step 1: Fetching current order to verify it exists...');
+        const { data: existingOrder, error: fetchError } = await window.supabase
+            .from('orders')
+            .select('id, order_status')
+            .eq('id', orderId)
+            .single();
+        
+        console.log('Existing order:', existingOrder);
+        console.log('Fetch error:', fetchError);
+        
+        if (fetchError) {
+            console.error('Order not found:', fetchError);
+            alert('Order not found in database');
+            return;
+        }
+        
+        console.log('Step 2: Updating order status...');
+        const { data: updateData, error: updateError } = await window.supabase
+            .from('orders')
+            .update({ order_status: newStatus })
+            .eq('id', orderId)
+            .select();
+        
+        console.log('Update data:', updateData);
+        console.log('Update error:', updateError);
+        
+        if (updateError) {
+            console.error('Error updating order status:', updateError);
+            alert('Failed to update order status: ' + updateError.message);
+            return;
+        }
+        
+        console.log('Step 3: Order status updated successfully');
+        
+        if (typeof showToast === 'function') {
+            showToast(`Order status updated to ${newStatus}`, 'success');
+        }
+        
+        console.log('Step 4: Reloading orders table...');
+        await loadOrdersTable();
+        console.log('Step 5: Complete');
+        
+    } catch (error) {
+        console.error('Exception in updateOrderStatus:', error);
+        alert('Error: ' + (error.message || 'Failed to update order status'));
+    }
+}
+
+window.updateOrderStatus = updateOrderStatus;
+
+
+async function deleteOrder(orderId) {
+    try {
+        const { data: order, error: fetchError } = await window.supabase
+            .from('orders')
+            .select('order_status')
+            .eq('id', orderId)
+            .single();
+        if (fetchError || !order) {
+            alert('Order not found!');
+            return;
+        }
+        if (order.order_status !== 'Delivered') {
+            alert('Only delivered orders can be deleted!');
+            return;
+        }
+        if (confirm(`Are you sure you want to delete order ${orderId.substring(0, 8)}?`)) {
+            const { error } = await window.supabase
+                .from('orders')
+                .delete()
+                .eq('id', orderId);
+            if (error) {
+                console.error('Error deleting order:', error);
+                alert('Error deleting order: ' + error.message);
+                return;
+            }
+            alert('Order deleted successfully!');
+            await loadOrdersTable();
+        }
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        alert('Error deleting order. Please try again.');
+    }
+}
+
+window.deleteOrder = deleteOrder;
+
+
+document.addEventListener('DOMContentLoaded', async function() {
+    const currentPage = window.location.pathname;
+    initializeAdminData();
+    let retries = 0;
+    while (typeof window.supabase === 'undefined' && retries < 20) {
+        console.log('Waiting for Supabase to initialize...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+    }
+    if (typeof window.supabase === 'undefined') {
+        console.error('Supabase failed to initialize!');
+        alert('Database connection failed. Please refresh the page.');
+        return;
+    }
+    if (typeof supabase === 'undefined') {
+        window.supabase = window.supabase;
+    }
+    console.log('Supabase initialized successfully');
+    if (currentPage.includes('admin-dashboard.html')) {
+        loadDashboard();
+    } else if (currentPage.includes('admin-products.html')) {
+        console.log('Admin Products page detected');
+        console.log('Testing Supabase connection...');
+
+        try {
+            const { data: testData, error: testError } = await window.supabase
+                .from('products')
+                .select('count');
+            console.log('Supabase connection test:', { testData, testError });
+        } catch (e) {
+            console.error('Supabase connection test failed:', e);
+        }
+        
+        console.log('Loading products table...');
+        await loadProductsTable();
+    } else if (currentPage.includes('admin-orders.html')) {
+        loadOrdersTable();
+    } else if (currentPage.includes('admin-add-product.html')) {
+        console.log('Admin Add Product page detected');
+        console.log('Loading vendors dropdown...');
+        await loadVendorsDropdown();
+        console.log('Loading categories dropdown...');
+        await loadCategoriesDropdown();
+        console.log('Dropdowns loaded');
+    }
+});
+
+
+
+
+const DEFAULT_CATEGORIES = [
+    "Fruits & Vegetables",
+    "Daily Staples",
+    "Snacks & More",
+    "Bakery & Dairy",
+    "Home Food",
+    "Special Categories",
+    "Conscious Living"
+];
+
+
+function toggleCategoryManagement() {
+    const panel = document.getElementById('category-management-panel');
+    if (!panel) return;
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'block';
+        displayCategoriesList();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+
+async function initializeCategories() {
+}
+
+
+async function getCategories() {
+    try {
+        const { data: categories, error } = await window.supabase
+            .from('categories')
+            .select('name')
+            .order('name');
+        if (error) {
+            console.error('Error fetching categories:', error);
+            return DEFAULT_CATEGORIES;
+        }
+        return categories ? categories.map(c => c.name) : DEFAULT_CATEGORIES;
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        return DEFAULT_CATEGORIES;
+    }
+}
+
+
+async function loadCategoriesDropdown() {
+    const categorySelect = document.getElementById('product-category');
+    if (!categorySelect) return;
+    const categories = await getCategories();
+    categorySelect.innerHTML = '<option value="">Select Category</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categorySelect.appendChild(option);
+    });
+}
+
+
+async function displayCategoriesList() {
+    const categoriesList = document.getElementById('categories-list');
+    if (!categoriesList) return;
+    const categories = await getCategories();
+    categoriesList.innerHTML = '';
+    categories.forEach(category => {
+        const categoryItem = document.createElement('div');
+        categoryItem.style.cssText = 'display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: 5px; border: 1px solid #ddd;';
+        const categoryName = document.createElement('span');
+        categoryName.textContent = category;
+        categoryName.style.cssText = 'flex: 1; color: #333;';
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '×';
+        deleteBtn.style.cssText = 'background: #d32f2f; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 18px; line-height: 1;';
+        deleteBtn.onclick = () => deleteCategory(category);
+        deleteBtn.title = 'Delete category';
+        categoryItem.appendChild(categoryName);
+        categoryItem.appendChild(deleteBtn);
+        categoriesList.appendChild(categoryItem);
+    });
+}
+
+
+async function addCategory() {
+    const input = document.getElementById('new-category-input');
+    if (!input) return;
+    const newCategory = input.value.trim();
+    if (!newCategory) {
+        alert('Please enter a category name');
+        return;
+    }
+    try {
+        const { data: existing } = await window.supabase
+            .from('categories')
+            .select('name')
+            .eq('name', newCategory)
+            .single();
+        if (existing) {
+            alert('Category already exists');
+            return;
+        }
+        const { error } = await window.supabase
+            .from('categories')
+            .insert([{ name: newCategory }]);
+        if (error) {
+            console.error('Error adding category:', error);
+            alert('Error adding category: ' + error.message);
+            return;
+        }
+        input.value = '';
+        await loadCategoriesDropdown();
+        await displayCategoriesList();
+        showMessage('Category added successfully!', 'success');
+    } catch (error) {
+        console.error('Error adding category:', error);
+        alert('Error adding category. Please try again.');
+    }
+}
+
+
+async function deleteCategory(categoryName) {
+    if (!confirm(`Are you sure you want to delete "${categoryName}"?`)) {
+        return;
+    }
+    try {
+        const { error } = await window.supabase
+            .from('categories')
+            .delete()
+            .eq('name', categoryName);
+        if (error) {
+            console.error('Error deleting category:', error);
+            alert('Error deleting category: ' + error.message);
+            return;
+        }
+        await loadCategoriesDropdown();
+        await displayCategoriesList();
+        showMessage('Category deleted successfully!', 'success');
+    } catch (error) {
+        console.error('Error deleting category:', error);
+        alert('Error deleting category. Please try again.');
+    }
+}
+
+
+function showMessage(message, type) {
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#4caf50' : '#f44336'};
+        color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    document.body.appendChild(messageDiv);
+    setTimeout(() => {
+        messageDiv.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 3000);
+}
+
+
+if (window.location.pathname.includes('admin-add-product.html')) {
+    document.addEventListener('DOMContentLoaded', async function() {
+        initializeCategories();
+        loadCategoriesDropdown();
+        displayCategoriesList();
+
+        let retries = 0;
+        while (typeof window.supabase === 'undefined' && retries < 20) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            retries++;
+        }
+        
+        if (typeof window.supabase !== 'undefined') {
+            await loadVendorsDropdown();
+        } else {
+            // Using backend API instead
+        }
+        
+        const categoryInput = document.getElementById('new-category-input');
+        if (categoryInput) {
+            categoryInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCategory();
+                }
+            });
+        }
+        const panel = document.getElementById('category-management-panel');
+        if (panel) {
+            panel.style.display = 'none';
+        }
+    });
+}
+
+
+
+
+
+function initializeVendors() {
+    if (!localStorage.getItem('vendors')) {
+        const defaultVendors = [
+            { id: 1, name: "Gousamhitha Farm", email: "vendor@gousamhitha.com", password: "vendor123", phone: "9876543210", status: "active" }
+        ];
+        localStorage.setItem('vendors', JSON.stringify(defaultVendors));
+    }
+}
+
+
+function initializeOrderItems() {
+    if (!localStorage.getItem('order_items')) {
+        localStorage.setItem('order_items', JSON.stringify([]));
+    }
+}
+
+
+initializeVendors();
+initializeOrderItems();
+
+
+function handleVendorLogin(event) {
+    event.preventDefault();
+
+
+
+    console.log('=== Loading Vendor Dashboard ===');
+    const currentUser = getCurrentUser();
+    console.log('Current user:', currentUser);
+    if (!currentUser || currentUser.role !== 'vendor') {
+        console.error('User is not a vendor, redirecting to login');
+        window.location.href = 'login.html';
+        return;
+    }
+    const vendorId = parseInt(localStorage.getItem('currentVendorId'));
+    const vendorName = localStorage.getItem('currentVendorName') || 'Vendor';
+    console.log('Vendor ID:', vendorId);
+    console.log('Vendor Name:', vendorName);
+    if (!vendorId) {
+        console.error('Vendor ID not found!');
+        alert('Vendor session not properly initialized. Please try logging in again.');
+        logout();
+        return;
+    }
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    console.log('Total products:', products.length);
+    const vendorNameInfo = document.getElementById('vendor-name-info');
+    const vendorIdInfo = document.getElementById('vendor-id-info');
+    if (vendorNameInfo) {
+        vendorNameInfo.textContent = vendorName;
+        console.log('Set vendor name in UI');
+    }
+    if (vendorIdInfo) {
+        vendorIdInfo.textContent = vendorId;
+        console.log('Set vendor ID in UI');
+    }
+    loadVendorInventory(vendorId, products);
+    loadVendorOrdersReceived(vendorId);
+    console.log('=== Vendor Dashboard Loaded ===');
+}
+
+
+function loadVendorInventory(vendorId, products) {
+    const tbody = document.getElementById('inventory-table-body');
+    if (!tbody) return;
+    const vendorProducts = products.filter(p => p.vendor_id === vendorId);
+    tbody.innerHTML = vendorProducts.map(product => {
+        const unit = product.unit || 'piece';
+        const stockStatus = product.stock > 0 ? 'In Stock' : 'Out of Stock';
+        const stockClass = product.stock > 0 ? 'in-stock' : 'out-of-stock';
+        return `
+        <tr>
+            <td>${product.name}</td>
+            <td>₹${product.price}</td>
+            <td>${product.stock}</td>
+            <td>${unit}</td>
+            <td><span class="status-badge ${stockClass}">${stockStatus}</span></td>
+            <td>
+                <button class="action-btn btn-edit" onclick="openStockEditPanel(${product.id})">Edit</button>
+            </td>
+        </tr>
+    `}).join('') || '<tr><td colspan="6">No products in inventory</td></tr>';
+}
+
+
+function loadVendorOrdersReceived(vendorId) {
+    const tbody = document.getElementById('orders-received-table-body');
+    if (!tbody) return;
+    const vendorOrders = getVendorOrders(vendorId);
+    tbody.innerHTML = vendorOrders.map(item => `
+        <tr>
+            <td>${item.orderId}</td>
+            <td>${item.productName}</td>
+            <td>${item.quantity}</td>
+            <td>
+                <select class="status-select" onchange="updateVendorOrderItemStatus('${item.id}', this.value)">
+                    <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="Confirmed" ${item.status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+                    <option value="Packed" ${item.status === 'Packed' ? 'selected' : ''}>Packed</option>
+                    <option value="Shipped" ${item.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                    <option value="Delivered" ${item.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                </select>
+            </td>
+        </tr>
+    `).join('') || '<tr><td colspan="4">No orders received yet</td></tr>';
+}
+
+
+function updateVendorOrderItemStatus(orderItemId, newStatus) {
+    if (updateOrderItemStatus(orderItemId, newStatus)) {
+        alert('Order status updated successfully');
+        loadVendorDashboard();
+    } else {
+        alert('Failed to update order status');
+    }
+}
+
+
+function openStockEditPanel(productId) {
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    const product = products.find(p => p.id === productId);
+    if (product) {
+        document.getElementById('stock-product-id').value = product.id;
+        document.getElementById('stock-product-name').value = product.name;
+        document.getElementById('stock-current').value = product.stock;
+        document.getElementById('stock-new').value = product.stock;
+        document.getElementById('stock-edit-panel').classList.add('active');
+    }
+}
+
+
+function closeStockPanel() {
+    document.getElementById('stock-edit-panel').classList.remove('active');
+    document.getElementById('stock-edit-form').reset();
+    document.getElementById('stock-form-message').textContent = '';
+    document.getElementById('stock-form-message').className = 'form-message';
+}
+
+
+function saveStockUpdate(event) {
+    event.preventDefault();
+    const productId = parseInt(document.getElementById('stock-product-id').value);
+    const newStock = parseInt(document.getElementById('stock-new').value);
+    const messageEl = document.getElementById('stock-form-message');
+    let products = JSON.parse(localStorage.getItem('products')) || [];
+    const productIndex = products.findIndex(p => p.id === productId);
+    if (productIndex !== -1) {
+        products[productIndex].stock = newStock;
+        products[productIndex].inStock = newStock > 0;
+        localStorage.setItem('products', JSON.stringify(products));
+        messageEl.textContent = 'Stock updated successfully!';
+        messageEl.className = 'form-message success';
+        setTimeout(() => {
+            closeStockPanel();
+            loadVendorDashboard();
+        }, 1000);
+    } else {
+        messageEl.textContent = 'Product not found';
+        messageEl.className = 'form-message error';
+    }
+}
+
+
+function loadVendorProducts() {
+    const vendorId = parseInt(localStorage.getItem('currentVendorId'));
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    const tbody = document.getElementById('vendor-products-table-body');
+    if (!tbody) return;
+    const vendorProducts = products.filter(p => p.vendor_id === vendorId);
+    tbody.innerHTML = vendorProducts.map(product => `
+        <tr>
+            <td><img src="${product.image}" alt="${product.name}" class="product-image-small"></td>
+            <td>${product.name}</td>
+            <td>${product.category}</td>
+            <td>₹${product.price}</td>
+            <td>${product.stock}</td>
+            <td><span class="status-badge ${product.inStock ? 'in-stock' : 'out-of-stock'}">${product.inStock ? 'In Stock' : 'Out of Stock'}</span></td>
+            <td>
+                <button class="action-btn btn-edit" onclick="editVendorProduct(${product.id})">Edit</button>
+                <button class="action-btn btn-delete" onclick="deleteVendorProduct(${product.id})">Delete</button>
+                <button class="action-btn btn-toggle" onclick="toggleVendorStock(${product.id})">${product.inStock ? 'Mark Out' : 'Mark In'}</button>
+            </td>
+        </tr>
+    `).join('') || '<tr><td colspan="7">No products yet</td></tr>';
+}
+
+
+function openAddProductPanel() {
+    document.getElementById('product-panel-title').textContent = 'Add New Product';
+    document.getElementById('product-id').value = '';
+    document.getElementById('vendor-product-form').reset();
+    document.getElementById('product-current-image').innerHTML = '';
+    loadVendorCategoriesDropdown();
+    document.getElementById('product-panel').classList.add('active');
+}
+
+
+function closeProductPanel() {
+    document.getElementById('product-panel').classList.remove('active');
+    document.getElementById('vendor-product-form').reset();
+}
+
+
+function loadVendorCategoriesDropdown() {
+    const categorySelect = document.getElementById('product-category');
+    if (!categorySelect) return;
+    const categories = getCategories();
+    categorySelect.innerHTML = '<option value="">Select Category</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categorySelect.appendChild(option);
+    });
+}
+
+
+let vendorImageBase64 = '';
+function previewProductImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('product-current-image');
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            vendorImageBase64 = e.target.result;
+            preview.innerHTML = `<img src="${vendorImageBase64}" alt="Preview" style="max-width: 150px; border-radius: 8px; margin-bottom: 10px;">`;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+
+function editVendorProduct(id) {
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    const product = products.find(p => p.id === id);
+    if (product) {
+        document.getElementById('product-panel-title').textContent = 'Edit Product';
+        document.getElementById('product-id').value = product.id;
+        document.getElementById('product-name').value = product.name;
+        document.getElementById('product-subcategory').value = product.subcategory;
+        document.getElementById('product-price').value = product.price;
+        document.getElementById('product-stock').value = product.stock;
+        document.getElementById('product-unit').value = product.unit || 'piece';
+        document.getElementById('product-description').value = product.description || '';
+        loadVendorCategoriesDropdown();
+        document.getElementById('product-category').value = product.category;
+        const currentImageDiv = document.getElementById('product-current-image');
+        currentImageDiv.innerHTML = `<img src="${product.image}" alt="${product.name}" style="max-width: 150px; border-radius: 8px; margin-bottom: 10px;">`;
+        vendorImageBase64 = product.image;
+        document.getElementById('product-panel').classList.add('active');
+    }
+}
+
+
+function saveVendorProduct(event) {
+    event.preventDefault();
+    const vendorId = parseInt(localStorage.getItem('currentVendorId'));
+    const productId = document.getElementById('product-id').value;
+    const name = document.getElementById('product-name').value;
+    const category = document.getElementById('product-category').value;
+    const subcategory = document.getElementById('product-subcategory').value;
+    const price = parseInt(document.getElementById('product-price').value);
+    const stock = parseInt(document.getElementById('product-stock').value);
+    const unit = document.getElementById('product-unit').value;
+    const description = document.getElementById('product-description').value;
+    const messageEl = document.getElementById('product-form-message');
+    let products = JSON.parse(localStorage.getItem('products')) || [];
+    if (productId) {
+        const index = products.findIndex(p => p.id === parseInt(productId));
+        if (index !== -1) {
+            products[index] = {
+                ...products[index],
+                name,
+                category,
+                subcategory,
+                price,
+                stock,
+                unit,
+                description,
+                inStock: stock > 0,
+                image: vendorImageBase64 || products[index].image
+            };
+        }
+    } else {
+        const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+        const newProduct = {
+            id: newId,
+            name,
+            category,
+            subcategory,
+            price,
+            stock,
+            unit,
+            image: vendorImageBase64 || 'images/placeholder.png',
+            description,
+            inStock: stock > 0,
+            vendor_id: vendorId
+        };
+        products.push(newProduct);
+    }
+    localStorage.setItem('products', JSON.stringify(products));
+    messageEl.textContent = 'Product saved successfully!';
+    messageEl.className = 'form-message success';
+    setTimeout(() => {
+        closeProductPanel();
+        loadVendorProducts();
+        vendorImageBase64 = '';
+    }, 1000);
+}
+
+
+function deleteVendorProduct(id) {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    let products = JSON.parse(localStorage.getItem('products')) || [];
+    products = products.filter(p => p.id !== id);
+    localStorage.setItem('products', JSON.stringify(products));
+    loadVendorProducts();
+}
+
+
+function toggleVendorStock(id) {
+    let products = JSON.parse(localStorage.getItem('products')) || [];
+    const product = products.find(p => p.id === id);
+    if (product) {
+        product.inStock = !product.inStock;
+        localStorage.setItem('products', JSON.stringify(products));
+        loadVendorProducts();
+    }
+}
+
+
+function loadVendorOrders() {
+    const vendorId = parseInt(localStorage.getItem('currentVendorId'));
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    const orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const tbody = document.getElementById('vendor-orders-table-body');
+    if (!tbody) return;
+    const vendorOrders = orders.filter(order => 
+        order.items && order.items.some(item => {
+            const product = products.find(p => p.name === item.name);
+            return product && product.vendor_id === vendorId;
+        })
+    );
+    tbody.innerHTML = vendorOrders.map((order, index) => {
+        const deliveryDate = order.deliveryDate || 'Not set';
+        const deliveryStatus = order.deliveryStatus || 'Pending';
+        return `
+        <tr>
+            <td>${order.id}</td>
+            <td>${order.items.map(item => `${item.name} (${item.quantity})`).join(', ')}</td>
+            <td>₹${order.total}</td>
+            <td>${order.date}</td>
+            <td>
+                <input type="date" class="delivery-date-input" value="${order.deliveryDate || ''}" 
+                       onchange="updateVendorDeliveryDate('${order.id}', this.value)">
+            </td>
+            <td>
+                <select class="status-select" onchange="updateVendorDeliveryStatus('${order.id}', this.value)">
+                    <option value="Pending" ${deliveryStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="Processing" ${deliveryStatus === 'Processing' ? 'selected' : ''}>Processing</option>
+                    <option value="Shipped" ${deliveryStatus === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                    <option value="Delivered" ${deliveryStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                </select>
+            </td>
+        </tr>
+    `}).join('') || '<tr><td colspan="6">No orders yet</td></tr>';
+}
+
+
+function updateVendorDeliveryDate(orderId, date) {
+    let orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.deliveryDate = date;
+        localStorage.setItem('orders', JSON.stringify(orders));
+    }
+}
+
+
+function updateVendorDeliveryStatus(orderId, status) {
+    let orders = JSON.parse(localStorage.getItem('orders')) || [];
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.deliveryStatus = status;
+        localStorage.setItem('orders', JSON.stringify(orders));
+    }
+}
+
+
+async function loadVendorsTable() {
+    const tbody = document.getElementById('vendors-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading vendors...</td></tr>';
+    try {
+        const { data: vendors, error: vendorsError } = await window.supabase
+            .from('vendors')
+            .select('*')
+            .order('created_at', { ascending: false });
+        const { data: products, error: productsError } = await window.supabase
+            .from('products')
+            .select('vendor_id');
+        if (vendorsError) {
+            console.error('Error fetching vendors:', vendorsError);
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">Error loading vendors</td></tr>';
+            return;
+        }
+        if (!vendors || vendors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No vendors yet</td></tr>';
+            return;
+        }
+        const productsList = products || [];
+        tbody.innerHTML = vendors.map(vendor => {
+            const vendorProductCount = productsList.filter(p => p.vendor_id === vendor.id).length;
+            return `
+            <tr>
+                <td>${vendor.id.substring(0, 8)}...</td>
+                <td>${vendor.vendor_name}</td>
+                <td>${vendor.business_name}</td>
+                <td>${vendor.phone || 'N/A'}</td>
+                <td>${vendor.address || 'N/A'}</td>
+                <td><span class="status-badge in-stock">active</span></td>
+                <td>
+                    <button class="action-btn btn-edit" onclick="editVendor('${vendor.id}')">Edit</button>
+                    <button class="action-btn btn-delete" onclick="deleteVendor('${vendor.id}')">Delete</button>
+                </td>
+            </tr>
+        `}).join('');
+    } catch (error) {
+        console.error('Error loading vendors:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">Error loading vendors</td></tr>';
+    }
+}
+
+
+function openAddVendorPanel() {
+    document.getElementById('vendor-panel-title').textContent = 'Add New Vendor';
+    document.getElementById('vendor-id').value = '';
+    document.getElementById('vendor-form').reset();
+    document.getElementById('vendor-panel').classList.add('active');
+}
+
+
+function closeVendorPanel() {
+    document.getElementById('vendor-panel').classList.remove('active');
+    document.getElementById('vendor-form').reset();
+}
+
+
+async function editVendor(id) {
+    try {
+        const { data: vendor, error } = await window.supabase
+            .from('vendors')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error || !vendor) {
+            alert('Error loading vendor details');
+            return;
+        }
+        document.getElementById('vendor-panel-title').textContent = 'Edit Vendor';
+        document.getElementById('vendor-id').value = vendor.id;
+        document.getElementById('vendor-name').value = vendor.vendor_name;
+        document.getElementById('business-name').value = vendor.business_name;
+        document.getElementById('vendor-phone').value = vendor.phone || '';
+        document.getElementById('vendor-address').value = vendor.address || '';
+        document.getElementById('vendor-status').value = 'active';
+        document.getElementById('vendor-panel').classList.add('active');
+    } catch (error) {
+        console.error('Error loading vendor:', error);
+        alert('Error loading vendor details');
+    }
+}
+
+
+async function saveVendor(event) {
+    event.preventDefault();
+    const vendorId = document.getElementById('vendor-id').value;
+    const vendorName = document.getElementById('vendor-name').value;
+    const businessName = document.getElementById('business-name').value;
+    const phone = document.getElementById('vendor-phone').value;
+    const address = document.getElementById('vendor-address').value;
+    const status = document.getElementById('vendor-status').value;
+    const messageEl = document.getElementById('vendor-form-message');
+    messageEl.textContent = 'Saving vendor...';
+    messageEl.className = 'form-message';
+    try {
+        if (vendorId) {
+            const { error } = await window.supabase
+                .from('vendors')
+                .update({
+                    vendor_name: vendorName,
+                    business_name: businessName,
+                    phone: phone || '',
+                    address: address || ''
+                })
+                .eq('id', vendorId);
+            if (error) throw error;
+        } else {
+            const { error } = await window.supabase
+                .from('vendors')
+                .insert([{
+                    vendor_name: vendorName,
+                    business_name: businessName,
+                    phone: phone || '',
+                    address: address || ''
+                }]);
+            if (error) throw error;
+        }
+        messageEl.textContent = 'Vendor saved successfully!';
+        messageEl.className = 'form-message success';
+        setTimeout(() => {
+            closeVendorPanel();
+            loadVendorsTable();
+        }, 1000);
+    } catch (error) {
+        console.error('Error saving vendor:', error);
+        messageEl.textContent = 'Error saving vendor: ' + error.message;
+        messageEl.className = 'form-message error';
+    }
+}
+
+
+async function deleteVendor(id) {
+    if (!confirm('Are you sure you want to delete this vendor? All their products will remain but will be unassigned.')) return;
+    try {
+        const { error } = await window.supabase
+            .from('vendors')
+            .delete()
+            .eq('id', id);
+        if (error) {
+            console.error('Error deleting vendor:', error);
+            alert('Error deleting vendor: ' + error.message);
+            return;
+        }
+        alert('Vendor deleted successfully!');
+        loadVendorsTable();
+    } catch (error) {
+        console.error('Error deleting vendor:', error);
+        alert('Error deleting vendor. Please try again.');
+    }
+}
+
+
+async function loadVendorsDropdown() {
+    const vendorSelect = document.getElementById('product-vendor');
+    if (!vendorSelect) {
+        console.log('Vendor select element not found');
+        return;
+    }
+    console.log('Loading vendors dropdown...');
+    try {
+        const { data: vendors, error } = await window.supabase
+            .from('vendors')
+            .select('*')
+            .order('vendor_name');
+        if (error) {
+            console.error('Error loading vendors:', error);
+            return;
+        }
+        console.log('Vendors loaded:', vendors);
+        vendorSelect.innerHTML = '<option value="">Select Vendor</option>';
+        if (vendors && vendors.length > 0) {
+            vendors.forEach(vendor => {
+                const option = document.createElement('option');
+                option.value = vendor.id;
+                option.textContent = vendor.vendor_name || vendor.business_name;
+                vendorSelect.appendChild(option);
+                console.log('Added vendor option:', vendor.vendor_name || vendor.business_name);
+            });
+        } else {
+            console.log('No vendors found in database');
+        }
+    } catch (error) {
+        console.error('Error loading vendors:', error);
+    }
+}
+
+
+const originalHandleAddProduct = handleAddProduct;
+handleAddProduct = function(event) {
+    event.preventDefault();
+    const name = document.getElementById('product-name').value;
+    const vendorId = parseInt(document.getElementById('product-vendor').value);
+    const category = document.getElementById('product-category').value;
+    const subcategory = document.getElementById('product-subcategory').value;
+    const price = parseInt(document.getElementById('product-price').value);
+    const stock = parseInt(document.getElementById('product-stock').value);
+    const description = document.getElementById('product-description').value;
+    const messageEl = document.getElementById('form-message');
+    if (!vendorId) {
+        messageEl.textContent = 'Please select a vendor';
+        messageEl.className = 'form-message error';
+        return;
+    }
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+    const newProduct = {
+        id: newId,
+        name,
+        category,
+        subcategory,
+        price,
+        stock,
+        image: imageBase64 || 'images/placeholder.png',
+        description,
+        inStock: stock > 0,
+        vendor_id: vendorId
+    };
+    products.push(newProduct);
+    localStorage.setItem('products', JSON.stringify(products));
+    messageEl.textContent = 'Product added successfully!';
+    messageEl.className = 'form-message success';
+    setTimeout(() => {
+        window.location.href = 'admin-products.html';
+    }, 1500);
+};
+
+
+const originalLoadProductsTable = loadProductsTable;
+loadProductsTable = function() {
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    const vendors = JSON.parse(localStorage.getItem('vendors')) || [];
+    const tbody = document.getElementById('products-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = products.map(product => {
+        let vendorName = 'N/A';
+        if (product.vendor_id) {
+            const vendor = vendors.find(v => v.id === product.vendor_id);
+            if (vendor) vendorName = vendor.name;
+        }
+        return `
+        <tr>
+            <td><img src="${product.image}" alt="${product.name}" class="product-image-small"></td>
+            <td>${product.name}<br><small style="color: #666;">Vendor: ${vendorName}</small></td>
+            <td>${product.category}</td>
+            <td>₹${product.price}</td>
+            <td>${product.stock}</td>
+            <td><span class="status-badge ${product.inStock ? 'in-stock' : 'out-of-stock'}">${product.inStock ? 'In Stock' : 'Out of Stock'}</span></td>
+            <td>
+                <button class="action-btn btn-edit" onclick="editProduct(${product.id})">Edit</button>
+                <button class="action-btn btn-delete" onclick="deleteProduct(${product.id})">Delete</button>
+                <button class="action-btn btn-toggle" onclick="toggleStock(${product.id})">${product.inStock ? 'Mark Out' : 'Mark In'}</button>
+            </td>
+        </tr>
+    `}).join('');
+};
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPage = window.location.pathname;
+    if (currentPage.includes('vendor-')) {
+        checkVendorAuth();
+        displayVendorName();
+        if (currentPage.includes('vendor-dashboard.html')) {
+            loadVendorDashboard();
+        } else if (currentPage.includes('vendor-products.html')) {
+            loadVendorProducts();
+        } else if (currentPage.includes('vendor-orders.html')) {
+            loadVendorOrders();
+        }
+    }
+    if (currentPage.includes('admin-vendors.html')) {
+        loadVendorsTable();
+    }
+    if (currentPage.includes('admin-add-product.html')) {
+        loadVendorsDropdown();
+    }
+});
+
+
+
+
+
+function openAddCategoryModal() {
+    document.getElementById('add-category-modal').style.display = 'flex';
+    document.getElementById('new-category-name').value = '';
+    document.getElementById('category-form-message').textContent = '';
+}
+
+
+function closeAddCategoryModal() {
+    document.getElementById('add-category-modal').style.display = 'none';
+}
+
+
+function addNewCategory(event) {
+    event.preventDefault();
+    const categoryName = document.getElementById('new-category-name').value.trim();
+    const messageEl = document.getElementById('category-form-message');
+    if (!categoryName) {
+        messageEl.textContent = 'Please enter a category name';
+        messageEl.style.color = 'red';
+        return;
+    }
+    let categories = JSON.parse(localStorage.getItem('categories')) || [
+        "Fruits & Vegetables",
+        "Daily Staples",
+        "Snacks & More",
+        "Bakery & Dairy",
+        "Home Food",
+        "Special Categories",
+        "Conscious Living"
+    ];
+    if (categories.includes(categoryName)) {
+        messageEl.textContent = 'Category already exists!';
+        messageEl.style.color = 'red';
+        return;
+    }
+    categories.push(categoryName);
+    localStorage.setItem('categories', JSON.stringify(categories));
+    loadCategoryOptions();
+    messageEl.textContent = 'Category added successfully!';
+    messageEl.style.color = 'green';
+    setTimeout(() => {
+        closeAddCategoryModal();
+    }, 1000);
+}
+
+
+function openDeleteCategoryModal() {
+    const modal = document.getElementById('delete-category-modal');
+    const select = document.getElementById('delete-category-select');
+    let categories = JSON.parse(localStorage.getItem('categories')) || [
+        "Fruits & Vegetables",
+        "Daily Staples",
+        "Snacks & More",
+        "Bakery & Dairy",
+        "Home Food",
+        "Special Categories",
+        "Conscious Living"
+    ];
+    select.innerHTML = '<option value="">Select Category</option>';
+    categories.forEach(cat => {
+        select.innerHTML += `<option value="${cat}">${cat}</option>`;
+    });
+    modal.style.display = 'flex';
+    document.getElementById('delete-category-message').textContent = '';
+}
+
+
+function closeDeleteCategoryModal() {
+    document.getElementById('delete-category-modal').style.display = 'none';
+}
+
+
+function deleteCategory(event) {
+    event.preventDefault();
+    const categoryToDelete = document.getElementById('delete-category-select').value;
+    const messageEl = document.getElementById('delete-category-message');
+    if (!categoryToDelete) {
+        messageEl.textContent = 'Please select a category to delete';
+        messageEl.style.color = 'red';
+        return;
+    }
+    let categories = JSON.parse(localStorage.getItem('categories')) || [
+        "Fruits & Vegetables",
+        "Daily Staples",
+        "Snacks & More",
+        "Bakery & Dairy",
+        "Home Food",
+        "Special Categories",
+        "Conscious Living"
+    ];
+    categories = categories.filter(cat => cat !== categoryToDelete);
+    localStorage.setItem('categories', JSON.stringify(categories));
+    loadCategoryOptions();
+    messageEl.textContent = 'Category deleted successfully!';
+    messageEl.style.color = 'green';
+    setTimeout(() => {
+        closeDeleteCategoryModal();
+    }, 1000);
+}
+
+
+function loadCategoryOptions() {
+    const categorySelect = document.getElementById('product-category');
+    if (!categorySelect) return;
+    let categories = JSON.parse(localStorage.getItem('categories')) || [
+        "Fruits & Vegetables",
+        "Daily Staples",
+        "Snacks & More",
+        "Bakery & Dairy",
+        "Home Food",
+        "Special Categories",
+        "Conscious Living"
+    ];
+    const currentValue = categorySelect.value;
+    categorySelect.innerHTML = '<option value="">Select Category</option>';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        if (cat === currentValue) {
+            option.selected = true;
+        }
+        categorySelect.appendChild(option);
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('product-category')) {
+        loadCategoryOptions();
+    }
+});

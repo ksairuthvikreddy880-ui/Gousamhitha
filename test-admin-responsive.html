@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin Responsive Test - Gousamhitha</title>
+    <link rel="stylesheet" href="admin-styles.css">
+    <link rel="stylesheet" href="css/admin-responsive.css">
+    <link rel="stylesheet" href="css/admin-scrolling-fix.css">
+    <style>
+        .test-header {
+            background: #2e7d32;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .test-info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #2e7d32;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+        }
+        .demo-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .demo-table th,
+        .demo-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .demo-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="admin-page">
+    <div class="test-header">
+        <h1>📱 Admin Responsive Design Test</h1>
+        <p>Test the mobile hamburger menu and responsive layout</p>
+    </div>
+
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2>Gousamhitha Admin</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active">Dashboard</a>
+                <a href="#" class="nav-link">Products</a>
+                <a href="#" class="nav-link">Add Product</a>
+                <a href="#" class="nav-link">Vendors</a>
+                <a href="#" class="nav-link">Orders</a>
+                <a href="#" class="nav-link">Payouts</a>
+                <a href="#" class="nav-link">Logout</a>
+            </nav>
+        </aside>
+        
+        <main class="admin-content">
+            <div class="test-info">
+                <h3>🧪 How to Test:</h3>
+                <ul>
+                    <li><strong>Desktop</strong>: Sidebar should be visible on the left (original design)</li>
+                    <li><strong>Mobile</strong>: Tap the hamburger menu (☰) in the top-left to open sidebar</li>
+                    <li><strong>Responsive</strong>: Resize browser window to see layout changes</li>
+                    <li><strong>Tables</strong>: On mobile, tables become card layouts</li>
+                </ul>
+            </div>
+
+            <div class="content-header">
+                <h1>Responsive Dashboard Test</h1>
+            </div>
+            
+            <div class="test-section">
+                <h2>Dashboard Cards (Responsive Grid)</h2>
+                <div class="dashboard-cards">
+                    <div class="dashboard-card">
+                        <h3>Total Products</h3>
+                        <p class="card-value">24</p>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Total Vendors</h3>
+                        <p class="card-value">8</p>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Orders Received</h3>
+                        <p class="card-value">156</p>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Out of Stock</h3>
+                        <p class="card-value">3</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2>Responsive Table Test</h2>
+                <div class="table-container">
+                    <table class="demo-table admin-table">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Fresh Paneer</td>
+                                <td>Dairy</td>
+                                <td>₹120</td>
+                                <td>25</td>
+                                <td>In Stock</td>
+                            </tr>
+                            <tr>
+                                <td>Organic Milk</td>
+                                <td>Dairy</td>
+                                <td>₹60</td>
+                                <td>50</td>
+                                <td>In Stock</td>
+                            </tr>
+                            <tr>
+                                <td>Basmati Rice</td>
+                                <td>Grains</td>
+                                <td>₹200</td>
+                                <td>0</td>
+                                <td>Out of Stock</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mobile-card-layout">
+                    <!-- Mobile cards will be generated here -->
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h2>Test Results</h2>
+                <div style="background: white; padding: 1rem; border-radius: 8px;">
+                    <h4>✅ Features to Verify:</h4>
+                    <ul>
+                        <li>Hamburger menu appears on mobile (≤768px)</li>
+                        <li>Sidebar slides in from left when menu is tapped</li>
+                        <li>Dashboard cards stack vertically on mobile</li>
+                        <li>Tables become horizontal scrollable or card layout</li>
+                        <li>Touch targets are at least 44px for accessibility</li>
+                        <li>Desktop layout remains unchanged</li>
+                        <li><strong>SCROLLING WORKS</strong> - Page should be scrollable on mobile</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Extra content to test scrolling -->
+            <div class="test-section">
+                <h2>Scrolling Test Content</h2>
+                <div style="background: #f0f7f0; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4>📱 Mobile Scrolling Test</h4>
+                    <p>This content should be scrollable on mobile devices. If you can see this text and scroll down to see more content, the scrolling fix is working correctly.</p>
+                </div>
+                
+                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4>Test Section 1</h4>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+                </div>
+                
+                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4>Test Section 2</h4>
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                </div>
+                
+                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4>Test Section 3</h4>
+                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                </div>
+                
+                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4>Test Section 4</h4>
+                    <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.</p>
+                </div>
+                
+                <div style="background: #e8f5e8; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <h4>🎉 End of Content</h4>
+                    <p><strong>If you can see this section, scrolling is working correctly!</strong> The page should smoothly scroll from top to bottom on all devices.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/admin-mobile.js"></script>
+    <script>
+        // Test functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🧪 Admin Responsive Test Page Loaded');
+            
+            // Populate mobile cards for demo
+            setTimeout(() => {
+                if (window.adminMobile) {
+                    // Create demo mobile cards
+                    const mobileLayout = document.querySelector('.mobile-card-layout');
+                    if (mobileLayout) {
+                        mobileLayout.innerHTML = `
+                            <div class="mobile-card">
+                                <div class="mobile-card-header">Fresh Paneer</div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Category:</span>
+                                    <span class="mobile-card-value">Dairy</span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Price:</span>
+                                    <span class="mobile-card-value">₹120</span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Stock:</span>
+                                    <span class="mobile-card-value">25</span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Status:</span>
+                                    <span class="mobile-card-value">In Stock</span>
+                                </div>
+                            </div>
+                            <div class="mobile-card">
+                                <div class="mobile-card-header">Organic Milk</div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Category:</span>
+                                    <span class="mobile-card-value">Dairy</span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Price:</span>
+                                    <span class="mobile-card-value">₹60</span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Stock:</span>
+                                    <span class="mobile-card-value">50</span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Status:</span>
+                                    <span class="mobile-card-value">In Stock</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Performance Optimization Integration Test</h1>
+    <div id="test-results"></div>
+
+    <!-- Supabase (required for tests) -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Mock Supabase config for testing
+        window.SUPABASE_CONFIG = {
+            url: 'https://test.supabase.co',
+            key: 'test-key'
+        };
+        window.supabase = window.supabase.createClient(
+            window.SUPABASE_CONFIG.url,
+            window.SUPABASE_CONFIG.key
+        );
+    </script>
+    
+    <!-- Performance Optimization System V2 -->
+    <script src="js/performance-master-v2.js"></script>
+
+    <script>
+        function addTestResult(name, passed, message) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${name}:</strong> ${passed ? 'PASS' : 'FAIL'}
+                ${message ? `<br><small>${message}</small>` : ''}
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function addInfo(message) {
+            const resultsDiv = document.getElementById('test-results');
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'test-result info';
+            infoDiv.innerHTML = `<strong>Info:</strong> ${message}`;
+            resultsDiv.appendChild(infoDiv);
+        }
+
+        // Wait for performance system to initialize
+        setTimeout(() => {
+            // Test 1: Performance Master loaded
+            addTestResult(
+                'Performance Master Loaded',
+                typeof window.PerformanceMaster !== 'undefined',
+                'PerformanceMaster should be available globally'
+            );
+
+            // Test 2: Performance Optimizer loaded
+            addTestResult(
+                'Performance Optimizer Loaded',
+                typeof window.PerformanceOptimizer !== 'undefined',
+                'PerformanceOptimizer should be available globally'
+            );
+
+            // Test 3: Optimization flag set
+            addTestResult(
+                'Optimization Flag Set',
+                window.optimizationsLoaded === true,
+                'optimizationsLoaded flag should prevent original scripts from running'
+            );
+
+            // Test 4: Performance monitoring
+            if (window.PerformanceMaster) {
+                const metrics = window.PerformanceMaster.getMetrics();
+                addTestResult(
+                    'Performance Monitoring',
+                    typeof metrics === 'object' && metrics !== null,
+                    'Performance metrics should be available'
+                );
+                
+                if (metrics) {
+                    addInfo(`Performance metrics collected: ${Object.keys(metrics).length} entries`);
+                }
+            }
+
+            // Test 5: Cache system
+            if (window.PerformanceOptimizer) {
+                window.PerformanceOptimizer.cache.set('test', 'value');
+                const cached = window.PerformanceOptimizer.cache.get('test');
+                addTestResult(
+                    'Cache System',
+                    cached === 'value',
+                    'Cache should store and retrieve values correctly'
+                );
+            }
+
+            // Test 6: Lazy loading setup
+            if (window.PerformanceMaster && window.PerformanceMaster.lazyLoader) {
+                addTestResult(
+                    'Lazy Loading System',
+                    typeof window.PerformanceMaster.lazyLoader.init === 'function',
+                    'Lazy loading system should be initialized'
+                );
+            }
+
+            // Test 7: Memory management
+            if (window.PerformanceMaster && window.PerformanceMaster.memory) {
+                addTestResult(
+                    'Memory Management',
+                    typeof window.PerformanceMaster.memory.cleanup === 'function',
+                    'Memory management system should be available'
+                );
+            }
+
+            // Test 8: Script loader
+            if (window.PerformanceMaster && window.PerformanceMaster.scriptLoader) {
+                addTestResult(
+                    'Script Loader',
+                    typeof window.PerformanceMaster.scriptLoader.load === 'function',
+                    'Script loader should be available for dynamic loading'
+                );
+            }
+
+            // Summary
+            const results = document.querySelectorAll('.test-result');
+            const passed = document.querySelectorAll('.pass').length;
+            const failed = document.querySelectorAll('.fail').length;
+            
+            addInfo(`Test Summary: ${passed} passed, ${failed} failed out of ${results.length - 1} tests`);
+            
+            if (failed === 0) {
+                addInfo('🚀 All performance optimizations are working correctly!');
+            } else {
+                addInfo('⚠️ Some optimizations may not be working properly.');
+            }
+
+        }, 1000); // Wait 1 second for initialization
+    </script>
+</body>
+</html>

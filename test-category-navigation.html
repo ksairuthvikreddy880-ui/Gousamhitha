@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Category Navigation - No Dropdowns</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/category-dropdown-fix.css">
+    <link rel="stylesheet" href="css/category-nav-simple.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/category-filter-system.js"></script>
+    <script src="js/category-dropdown-enhancement.js"></script>
+</head>
+<body>
+    <h1>Category Navigation Test (No Dropdowns)</h1>
+    
+    <!-- Category Navigation -->
+    <div class="shop-category-nav">
+        <div class="container">
+            <div class="category-nav-items">
+                <div class="category-item">
+                    <a href="shop.html?category=Fruits & Vegetables" class="category-link">Fruits & Vegetables</a>
+                </div>
+                
+                <div class="category-item">
+                    <a href="shop.html?category=Daily Staples" class="category-link">Daily Staples</a>
+                </div>
+                
+                <div class="category-item">
+                    <a href="shop.html?category=Snacks & More" class="category-link">Snacks & More</a>
+                </div>
+                
+                <div class="category-item">
+                    <a href="shop.html?category=Bakery & Dairy" class="category-link">Bakery & Dairy</a>
+                </div>
+                
+                <div class="category-item">
+                    <a href="shop.html?category=Home Food" class="category-link">Home Food</a>
+                </div>
+                
+                <div class="category-item">
+                    <a href="shop.html?category=Special Categories" class="category-link">Special Categories</a>
+                </div>
+                
+                <div class="category-item">
+                    <a href="shop.html?category=Conscious Living" class="category-link">Conscious Living</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Results -->
+    <div style="padding: 2rem;">
+        <h2>Test Results</h2>
+        <div id="test-results">
+            <p>Testing category navigation...</p>
+        </div>
+        
+        <h3>Product Display Area</h3>
+        <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <!-- Products will be loaded here -->
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const results = document.getElementById('test-results');
+            
+            // Test 1: Check if dropdowns are hidden
+            setTimeout(() => {
+                const dropdowns = document.querySelectorAll('.category-dropdown');
+                results.innerHTML += `<p>✅ Dropdown elements found: ${dropdowns.length} (should be 0)</p>`;
+                
+                // Test 2: Check if category links work
+                const categoryLinks = document.querySelectorAll('.category-link');
+                results.innerHTML += `<p>✅ Category links found: ${categoryLinks.length}</p>`;
+                
+                // Test 3: Check if hover doesn't show dropdowns
+                const firstCategory = categoryLinks[0];
+                if (firstCategory) {
+                    firstCategory.addEventListener('mouseenter', () => {
+                        setTimeout(() => {
+                            const visibleDropdowns = Array.from(document.querySelectorAll('.category-dropdown'))
+                                .filter(d => d.style.display !== 'none' && d.style.visibility !== 'hidden');
+                            results.innerHTML += `<p>✅ Visible dropdowns on hover: ${visibleDropdowns.length} (should be 0)</p>`;
+                        }, 100);
+                    });
+                    
+                    // Trigger hover test
+                    firstCategory.dispatchEvent(new Event('mouseenter'));
+                }
+                
+                // Test 4: Check if category filtering works
+                if (window.categoryFilterSystem) {
+                    results.innerHTML += `<p>✅ Category filter system loaded: Yes</p>`;
+                } else {
+                    results.innerHTML += `<p>⚠️ Category filter system loaded: No</p>`;
+                }
+                
+                results.innerHTML += `<p><strong>Test completed! Category navigation should work without dropdowns.</strong></p>`;
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

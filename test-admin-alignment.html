@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin Mobile Alignment Test</title>
+    <link rel="stylesheet" href="admin-styles.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/admin-responsive.css">
+    <link rel="stylesheet" href="css/admin-scrolling-fix.css">
+    <link rel="stylesheet" href="css/admin-mobile-alignment-fix.css">
+    <script src="js/admin-mobile.js"></script>
+</head>
+<body class="admin-page">
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2>Gousamhitha Admin</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active">Alignment Test</a>
+                <a href="admin-dashboard.html" class="nav-link">Dashboard</a>
+                <a href="admin-products.html" class="nav-link">Products</a>
+                <a href="admin-vendors.html" class="nav-link">Vendors</a>
+                <a href="admin-orders.html" class="nav-link">Orders</a>
+            </nav>
+        </aside>
+        
+        <main class="admin-content">
+            <div class="content-header">
+                <h1>Mobile Alignment Test</h1>
+            </div>
+            
+            <div class="section-container">
+                <h2 class="section-title">Test Modal Positioning</h2>
+                <p>Click the button below to test modal alignment on mobile:</p>
+                <button onclick="openTestModal()" class="btn-primary">Open Test Modal</button>
+            </div>
+            
+            <div class="section-container">
+                <h2 class="section-title">Test Content Scrolling</h2>
+                <p>This content should be scrollable on mobile devices.</p>
+                <div style="height: 200px; background: #f0f0f0; margin: 1rem 0; padding: 1rem; border-radius: 8px;">
+                    <h3>Scrollable Content Block 1</h3>
+                    <p>This is a test content block to verify scrolling works properly.</p>
+                </div>
+                
+                <div style="height: 200px; background: #e8f5e8; margin: 1rem 0; padding: 1rem; border-radius: 8px;">
+                    <h3>Scrollable Content Block 2</h3>
+                    <p>Another content block to test vertical scrolling on mobile.</p>
+                </div>
+                
+                <div style="height: 200px; background: #fff3e0; margin: 1rem 0; padding: 1rem; border-radius: 8px;">
+                    <h3>Scrollable Content Block 3</h3>
+                    <p>More content to ensure the page is long enough to test scrolling.</p>
+                </div>
+                
+                <div style="height: 200px; background: #f3e5f5; margin: 1rem 0; padding: 1rem; border-radius: 8px;">
+                    <h3>Scrollable Content Block 4</h3>
+                    <p>Final content block to verify scrolling behavior.</p>
+                </div>
+            </div>
+            
+            <div class="section-container">
+                <h2 class="section-title">Hamburger Menu Test</h2>
+                <p>On mobile devices:</p>
+                <ul>
+                    <li>✅ Hamburger menu should appear in top-left corner</li>
+                    <li>✅ Menu should not overlap with content</li>
+                    <li>✅ Content should have proper top padding (60px)</li>
+                    <li>✅ Modals should appear below hamburger menu</li>
+                    <li>✅ Page should be scrollable</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Test Modal -->
+    <div id="testModal" class="edit-panel" style="display: none;">
+        <div class="edit-panel-header">
+            <h3>Test Modal</h3>
+            <button class="close-panel" onclick="closeTestModal()">&times;</button>
+        </div>
+        <div class="edit-panel-content">
+            <div class="form-group">
+                <label>Test Input:</label>
+                <input type="text" placeholder="Test input field">
+            </div>
+            <div class="form-group">
+                <label>Test Textarea:</label>
+                <textarea placeholder="Test textarea field" rows="4"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary">Save</button>
+                <button class="btn-secondary" onclick="closeTestModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function openTestModal() {
+            const modal = document.getElementById('testModal');
+            modal.style.display = 'block';
+            document.body.classList.add('modal-open');
+        }
+        
+        function closeTestModal() {
+            const modal = document.getElementById('testModal');
+            modal.style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+        
+        // Test alignment on load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Admin alignment test page loaded');
+            console.log('📱 Window width:', window.innerWidth);
+            console.log('📱 Is mobile:', window.innerWidth <= 768);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart Test - No Select All</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>Cart Test - Select All Removed</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        function runTests() {
+            const results = [];
+            
+            // Test 1: Check if select all elements are hidden
+            const selectAllElements = document.querySelectorAll(`
+                .select-all-container,
+                .working-select-all,
+                #select-all-toggle,
+                #working-select-all
+            `);
+            
+            if (selectAllElements.length === 0) {
+                results.push({ type: 'success', message: '✅ No select all elements found in DOM' });
+            } else {
+                results.push({ type: 'error', message: `❌ Found ${selectAllElements.length} select all elements` });
+            }
+            
+            // Test 2: Check if select all functions are disabled
+            if (typeof window.handleSelectAll === 'function') {
+                const result = window.handleSelectAll();
+                if (result === false) {
+                    results.push({ type: 'success', message: '✅ Select all function properly disabled' });
+                } else {
+                    results.push({ type: 'error', message: '❌ Select all function not properly disabled' });
+                }
+            } else {
+                results.push({ type: 'info', message: 'ℹ️ Select all function not found (expected)' });
+            }
+            
+            // Test 3: Check CSS hiding rules
+            const style = document.createElement('div');
+            style.className = 'select-all-container';
+            document.body.appendChild(style);
+            const computedStyle = window.getComputedStyle(style);
+            
+            if (computedStyle.display === 'none') {
+                results.push({ type: 'success', message: '✅ CSS hiding rules working correctly' });
+            } else {
+                results.push({ type: 'error', message: '❌ CSS hiding rules not working' });
+            }
+            
+            document.body.removeChild(style);
+            
+            // Display results
+            const resultsDiv = document.getElementById('test-results');
+            results.forEach(result => {
+                const div = document.createElement('div');
+                div.className = `test-result ${result.type}`;
+                div.textContent = result.message;
+                resultsDiv.appendChild(div);
+            });
+            
+            // Summary
+            const successCount = results.filter(r => r.type === 'success').length;
+            const totalTests = results.filter(r => r.type !== 'info').length;
+            
+            const summary = document.createElement('div');
+            summary.className = `test-result ${successCount === totalTests ? 'success' : 'error'}`;
+            summary.innerHTML = `<strong>Summary: ${successCount}/${totalTests} tests passed</strong>`;
+            resultsDiv.appendChild(summary);
+        }
+        
+        // Run tests after page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>

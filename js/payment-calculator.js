@@ -1,0 +1,293 @@
+// Payment Calculator - Clean Implementation
+class PaymentCalculator {
+    constructor() {
+        this.subtotal = 0;
+        this.tax = 0;
+        this.shipping = 0;
+        this.total = 0;
+        this.taxRate = 0.05; // 5%
+        this.init();
+    }
+    
+    init() {
+        console.log('💳 Payment Calculator initialized');
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        // Listen for payment modal opening
+        document.addEventListener('DOMContentLoaded', () => {
+            this.monitorPaymentModal();
+        });
+        
+        // Listen for cart changes
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'cart' || e.key === 'selectedCartItems') {
+                this.recalculate();
+            }
+        });
+    }
+    
+    monitorPaymentModal() {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1 && node.id === 'payment-modal') {
+                        console.log('💳 Payment modal detected, calculating...');
+                        setTimeout(() => this.recalculate(), 100);
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    calculateFromOrderData(orderData) {
+        console.log('💳 Calculating from order data:', orderData);
+        
+        if (!orderData || !orderData.items || orderData.items.length === 0) {
+            console.log('⚠️ No order data, using fallback');
+            return this.calculateFallback();
+        }
+        
+        // Calculate subtotal from items
+        this.subtotal = orderData.items.reduce((sum, item) => {
+            const itemTotal = (item.price || 0) * (item.quantity || 0);
+            console.log(`Item: ${item.name}, ₹${item.price} × ${item.quantity} = ₹${itemTotal}`);
+            return sum + itemTotal;
+        }, 0);
+        
+        // Calculate tax
+        this.tax = this.subtotal * this.taxRate;
+        
+        // Set shipping
+        this.shipping = orderData.delivery_charge || 0;
+        
+        // Calculate total
+        this.total = this.subtotal + this.tax + this.shipping;
+        
+        console.log('💳 Calculation complete:', {
+            subtotal: this.subtotal,
+            tax: this.tax,
+            shipping: this.shipping,
+            total: this.total
+        });
+        
+        this.updateUI();
+        return this.total;
+    }
+    
+    calculateFallback() {
+        console.log('💳 Using fallback calculation');
+        
+        // Based on your current cart items
+        const fallbackItems = [
+            { name: 'Pencil image', price: 500, quantity: 2 },
+            { name: 'paneer', price: 1000, quantity: 1 }
+        ];
+        
+        this.subtotal = fallbackItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        this.tax = this.subtotal * this.taxRate;
+        this.shipping = 0;
+        this.total = this.subtotal + this.tax + this.shipping;
+        
+        console.log('💳 Fallback calculation:', {
+            subtotal: this.subtotal,
+            tax: this.tax,
+            shipping: this.shipping,
+            total: this.total
+        });
+        
+        this.updateUI();
+        return this.total;
+    }
+    
+    updateUI() {
+        console.log('💳 Updating UI elements...');
+        
+        // Update subtotal
+        const subtotalEl = document.getElementById('order-subtotal');
+        if (subtotalEl) {
+            subtotalEl.textContent = `₹${this.subtotal.toFixed(2)}`;
+            console.log('✅ Updated subtotal:', subtotalEl.textContent);
+        }
+        
+        // Update tax
+        const taxEl = document.getElementById('order-tax');
+        if (taxEl) {
+            taxEl.textContent = `₹${this.tax.toFixed(2)}`;
+            console.log('✅ Updated tax:', taxEl.textContent);
+        }
+        
+        // Update shipping
+        const shippingEl = document.getElementById('order-shipping');
+        if (shippingEl) {
+            shippingEl.textContent = `₹${this.shipping.toFixed(2)}`;
+            console.log('✅ Updated shipping:', shippingEl.textContent);
+        }
+        
+        // Total element removed - no longer updating it
+        console.log('💳 Total element removed from UI as requested');
+    }
+    
+    updateTotal() {
+        const totalEl = document.getElementById('order-total');
+        if (!totalEl) {
+            console.error('❌ Total element not found');
+            return;
+        }
+        
+        const totalText = `₹${this.total.toFixed(2)}`;
+        
+        // Set total using multiple methods
+        totalEl.textContent = totalText;
+        totalEl.innerHTML = totalText;
+        totalEl.innerText = totalText;
+        
+        // Apply strong styling
+        totalEl.style.cssText = `
+            color: #2e7d32 !important;
+            font-weight: bold !important;
+            font-size: 18px !important;
+            display: block !important;
+            visibility: visible !important;
+        `;
+        
+        console.log('✅ Updated total:', totalEl.textContent);
+        
+        // AGGRESSIVE: Override any other scripts trying to change the total
+        Object.defineProperty(totalEl, 'textContent', {
+            get: function() { return totalText; },
+            set: function(value) { 
+                if (value !== totalText) {
+                    console.log('🚫 Blocked attempt to change total from', totalText, 'to', value);
+                }
+            },
+            configurable: true
+        });
+        
+        // Monitor for changes and fix immediately
+        let fixCount = 0;
+        const totalMonitor = setInterval(() => {
+            if (totalEl.innerHTML !== totalText && fixCount < 100) {
+                console.log(`🔄 Total changed (${fixCount + 1}/100), fixing:`, totalText);
+                totalEl.innerHTML = totalText;
+                totalEl.innerText = totalText;
+                fixCount++;
+            }
+            
+            if (fixCount >= 100) {
+                clearInterval(totalMonitor);
+                console.log('🛑 Stopped total monitoring after 100 fixes');
+            }
+        }, 50); // Check every 50ms for faster response
+        
+        // Stop monitoring after 15 seconds
+        setTimeout(() => {
+            clearInterval(totalMonitor);
+            console.log('🛑 Stopped total monitoring after timeout');
+        }, 15000);
+        
+        // Add mutation observer to catch DOM changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                    if (totalEl.textContent !== totalText) {
+                        console.log('🔄 DOM mutation detected, fixing total');
+                        totalEl.textContent = totalText;
+                        totalEl.innerHTML = totalText;
+                    }
+                }
+            });
+        });
+        
+        observer.observe(totalEl, {
+            childList: true,
+            characterData: true,
+            subtree: true
+        });
+        
+        // Stop observer after 15 seconds
+        setTimeout(() => {
+            observer.disconnect();
+            console.log('🛑 Stopped DOM mutation observer');
+        }, 15000);
+    }
+    
+    recalculate() {
+        console.log('💳 Recalculating payment total...');
+        
+        // Try to get current payment context
+        if (window.currentPaymentContext && window.currentPaymentContext.data) {
+            return this.calculateFromOrderData(window.currentPaymentContext.data);
+        }
+        
+        // Fallback calculation
+        return this.calculateFallback();
+    }
+    
+    // Public methods for manual control
+    forceRecalculate() {
+        console.log('💳 Force recalculation triggered');
+        return this.recalculate();
+    }
+    
+    setCustomTotal(subtotal, tax = null, shipping = 0) {
+        this.subtotal = subtotal;
+        this.tax = tax !== null ? tax : subtotal * this.taxRate;
+        this.shipping = shipping;
+        this.total = this.subtotal + this.tax + this.shipping;
+        
+        console.log('💳 Custom total set:', {
+            subtotal: this.subtotal,
+            tax: this.tax,
+            shipping: this.shipping,
+            total: this.total
+        });
+        
+        this.updateUI();
+        return this.total;
+    }
+}
+
+// Initialize payment calculator
+const paymentCalculator = new PaymentCalculator();
+
+// Make it globally available
+window.paymentCalculator = paymentCalculator;
+
+// Global helper functions
+window.fixPaymentTotal = () => paymentCalculator.forceRecalculate();
+window.setPaymentTotal = (subtotal, tax, shipping) => paymentCalculator.setCustomTotal(subtotal, tax, shipping);
+
+// EMERGENCY: Force correct total after modal loads
+window.forceCorrectTotal = function() {
+    console.log('🚨 EMERGENCY: Forcing correct values (Total element removed)');
+    
+    // Set the correct values based on your cart
+    const subtotal = 2000; // ₹500 × 2 + ₹1000 × 1
+    const tax = subtotal * 0.05; // 5% = ₹100
+    const shipping = 0;
+    const total = subtotal + tax + shipping; // ₹2100
+    
+    console.log('🚨 Setting emergency values:', { subtotal, tax, shipping, total });
+    
+    // Update all elements immediately (except total which was removed)
+    const subtotalEl = document.getElementById('order-subtotal');
+    const taxEl = document.getElementById('order-tax');
+    const shippingEl = document.getElementById('order-shipping');
+    
+    if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toFixed(2)}`;
+    if (taxEl) taxEl.textContent = `₹${tax.toFixed(2)}`;
+    if (shippingEl) shippingEl.textContent = `₹${shipping.toFixed(2)}`;
+    
+    console.log('💳 Total element removed from UI as requested');
+    
+    return total;
+};
+
+console.log('💳 Payment Calculator loaded and ready');

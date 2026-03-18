@@ -1,0 +1,5 @@
+# Only ignore these files
+node_modules
+.env
+backend/.env
+*.log

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Category Filter - Gousamhitha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 1rem 0;
+        }
+        .category-btn {
+            padding: 10px 20px;
+            border: 2px solid #4a7c59;
+            background: white;
+            color: #4a7c59;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        .category-btn:hover, .category-btn.active {
+            background: #4a7c59;
+            color: white;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .product-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: bold;
+        }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .error { background: #ffebee; color: #c62828; }
+        .info { background: #e3f2fd; color: #1976d2; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🏷️ Category Filter Test</h1>
+        <p>Test the category filtering functionality with real database products.</p>
+        
+        <div class="test-container">
+            <h2>Available Categories</h2>
+            <div class="category-buttons">
+                <button class="category-btn active" onclick="filterProducts('all')">All Products</button>
+                <button class="category-btn" onclick="filterProducts('Fruits & Vegetables')">Fruits & Vegetables</button>
+                <button class="category-btn" onclick="filterProducts('Daily Staples')">Daily Staples</button>
+                <button class="category-btn" onclick="filterProducts('Snacks & More')">Snacks & More</button>
+                <button class="category-btn" onclick="filterProducts('Bakery & Dairy')">Bakery & Dairy</button>
+                <button class="category-btn" onclick="filterProducts('Home Food')">Home Food</button>
+                <button class="category-btn" onclick="filterProducts('Special Categories')">Special Categories</button>
+                <button class="category-btn" onclick="filterProducts('Conscious Living')">Conscious Living</button>
+            </div>
+        </div>
+        
+        <div class="test-container">
+            <h2>Filter Results</h2>
+            <div id="filter-status" class="status info">Click a category to test filtering</div>
+            <div id="product-count" style="margin: 1rem 0; font-weight: bold;"></div>
+        </div>
+        
+        <div class="product-grid" id="product-grid">
+            <div style="text-align: center; padding: 2rem; color: #666;">Click a category to load products</div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-client.js?v=11"></script>
+    <script src="js/category-filter-system.js"></script>
+    
+    <script>
+        let allProducts = [];
+        let currentFilter = 'all';
+        
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('filter-status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function updateProductCount(count, category = 'all') {
+            const countEl = document.getElementById('product-count');
+            if (category === 'all') {
+                countEl.textContent = `Total: ${count} products`;
+            } else {
+                countEl.textContent = `${category}: ${count} products`;
+            }
+        }
+        
+        async function loadAllProducts() {
+            showStatus('Loading products from database...', 'info');
+            
+            try {
+                if (!window.supabase) {
+                    throw new Error('Supabase not available');
+                }
+                
+                const { data: products, error } = await window.supabase
+                    .from('products')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                allProducts = products || [];
+                showStatus(`✅ Loaded ${allProducts.length} products successfully`, 'success');
+                updateProductCount(allProducts.length);
+                
+                // Display all products initially
+                displayProducts(allProducts);
+                
+                // Show available categories
+                showAvailableCategories();
+                
+            } catch (error) {
+                console.error('Error loading products:', error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showAvailableCategories() {
+            const categories = {};
+            allProducts.forEach(product => {
+                if (!categories[product.category]) {
+                    categories[product.category] = 0;
+                }
+                categories[product.category]++;
+            });
+            
+            console.log('📊 Available categories:', categories);
+        }
+        
+        function filterProducts(category) {
+            currentFilter = category;
+            
+            // Update active button
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            showStatus(`Filtering by: ${category}`, 'info');
+            
+            let filteredProducts;
+            if (category === 'all') {
+                filteredProducts = allProducts;
+            } else {
+                filteredProducts = allProducts.filter(product => product.category === category);
+            }
+            
+            updateProductCount(filteredProducts.length, category);
+            displayProducts(filteredProducts);
+            
+            if (filteredProducts.length === 0 && category !== 'all') {
+                showStatus(`No products found in "${category}" category`, 'error');
+            } else {
+                showStatus(`✅ Showing ${filteredProducts.length} products`, 'success');
+            }
+        }
+        
+        function displayProducts(products) {
+            const grid = document.getElementById('product-grid');
+            
+            if (products.length === 0) {
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; grid-column: 1/-1;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">📦</div>
+                        <div style="font-size: 1.2rem; color: #666;">No products found</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = products.map(product => `
+                <div class="product-card">
+                    <img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+                    <h3 style="margin: 0.5rem 0; color: #333;">${product.name}</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin: 0.3rem 0;">
+                        <strong>Category:</strong> ${product.category}
+                    </p>
+                    ${product.subcategory ? `<p style="color: #666; font-size: 0.9rem; margin: 0.3rem 0;">
+                        <strong>Subcategory:</strong> ${product.subcategory}
+                    </p>` : ''}
+                    <p style="font-size: 1.2rem; font-weight: bold; color: #4a7c59; margin: 0.5rem 0;">₹${product.price}</p>
+                    <p style="color: ${product.stock > 0 ? '#2e7d32' : '#d32f2f'}; font-size: 0.9rem;">
+                        ${product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
+                    </p>
+                </div>
+            `).join('');
+        }
+        
+        // Initialize when Supabase is ready
+        window.addEventListener('supabaseReady', function() {
+            console.log('✅ Supabase ready, loading products...');
+            loadAllProducts();
+        });
+        
+        // Also try after delay
+        setTimeout(() => {
+            if (window.supabase) {
+                loadAllProducts();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

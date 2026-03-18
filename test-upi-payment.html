@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test UPI Payment System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; background: #4a7c59; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: #3a6b49; }
+        .amount-input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin: 5px; }
+        .info { background: #f0f8ff; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+    
+    <!-- UPI Payment System -->
+    <script src="js/upi-payment-system.js"></script>
+</head>
+<body>
+    <h1>UPI Payment System Test</h1>
+    
+    <div class="info">
+        <h3>Admin Payment Details:</h3>
+        <p><strong>UPI ID:</strong> 7893059116@paytm</p>
+        <p><strong>Merchant Name:</strong> Gousamhitha</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test Cart Payment</h3>
+        <p>This will calculate the total from items in localStorage cart and redirect to UPI payment.</p>
+        <button class="btn" onclick="testCartPayment()">Test Cart Checkout</button>
+        <button class="btn" onclick="addTestItemsToCart()">Add Test Items to Cart</button>
+        <button class="btn" onclick="clearCart()">Clear Cart</button>
+        <div id="cart-info"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test Donation Payment</h3>
+        <p>Enter an amount to test donation payment flow.</p>
+        <input type="number" id="donation-amount" class="amount-input" placeholder="Enter amount" value="500">
+        <button class="btn" onclick="testDonationPayment()">Test Donation Payment</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test UPI Link Generation</h3>
+        <p>Generate UPI links for testing.</p>
+        <input type="number" id="test-amount" class="amount-input" placeholder="Enter amount" value="100">
+        <button class="btn" onclick="generateTestUPILink()">Generate UPI Link</button>
+        <button class="btn" onclick="testDirectUPIPayment()">Test Direct UPI Payment</button>
+        <div id="upi-link-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Payment Status</h3>
+        <button class="btn" onclick="checkPaymentStatus()">Check Payment Status</button>
+        <div id="payment-status"></div>
+    </div>
+    
+    <script>
+        // Test functions
+        function testCartPayment() {
+            console.log('Testing cart payment...');
+            if (window.upiPaymentSystem) {
+                window.upiPaymentSystem.processCartPayment();
+            } else {
+                alert('UPI Payment System not loaded');
+            }
+        }
+        
+        function testDonationPayment() {
+            const amount = parseFloat(document.getElementById('donation-amount').value);
+            console.log('Testing donation payment with amount:', amount);
+            
+            if (amount && amount > 0) {
+                // Set donor name for testing
+                sessionStorage.setItem('donorName', 'Test Donor');
+                
+                if (window.upiPaymentSystem) {
+                    window.upiPaymentSystem.processDonationPayment(amount);
+                } else {
+                    alert('UPI Payment System not loaded');
+                }
+            } else {
+                alert('Please enter a valid amount');
+            }
+        }
+        
+        function testDirectUPIPayment() {
+            const amount = parseFloat(document.getElementById('test-amount').value);
+            console.log('Testing direct UPI payment with amount:', amount);
+            
+            if (amount && amount > 0) {
+                if (window.openUPIPayment) {
+                    window.openUPIPayment(amount, 'order');
+                } else {
+                    alert('openUPIPayment function not available');
+                }
+            } else {
+                alert('Please enter a valid amount');
+            }
+        }
+        
+        function generateTestUPILink() {
+            const amount = parseFloat(document.getElementById('test-amount').value);
+            console.log('Generating test UPI link for amount:', amount);
+            
+            if (amount && amount > 0) {
+                if (window.upiPaymentSystem) {
+                    const upiLink = window.upiPaymentSystem.generateUPILink(amount, 'Test Payment');
+                    const paytmLink = window.upiPaymentSystem.generatePaytmLink(amount);
+                    
+                    document.getElementById('upi-link-result').innerHTML = `
+                        <p><strong>Generated UPI Link:</strong></p>
+                        <p style="word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 4px;">${upiLink}</p>
+                        <p><strong>Generated Paytm Link:</strong></p>
+                        <p style="word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 4px;">${paytmLink}</p>
+                        <button class="btn" onclick="window.location.href='${upiLink}'">Test UPI Link</button>
+                        <button class="btn" onclick="window.open('${paytmLink}', '_blank')">Test Paytm Link</button>
+                    `;
+                } else {
+                    alert('UPI Payment System not loaded');
+                }
+            } else {
+                alert('Please enter a valid amount');
+            }
+        }
+        
+        function addTestItemsToCart() {
+            const testCart = [
+                { id: 1, name: 'Test Product 1', price: 100, quantity: 2 },
+                { id: 2, name: 'Test Product 2', price: 150, quantity: 1 }
+            ];
+            
+            localStorage.setItem('cart', JSON.stringify(testCart));
+            updateCartInfo();
+            alert('Test items added to cart');
+        }
+        
+        function clearCart() {
+            localStorage.setItem('cart', '[]');
+            updateCartInfo();
+            alert('Cart cleared');
+        }
+        
+        function updateCartInfo() {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const total = window.upiPaymentSystem ? window.upiPaymentSystem.calculateCartTotal() : 0;
+            
+            document.getElementById('cart-info').innerHTML = `
+                <p><strong>Cart Items:</strong> ${cart.length}</p>
+                <p><strong>Total Amount:</strong> ₹${total}</p>
+            `;
+        }
+        
+        function checkPaymentStatus() {
+            if (window.upiPaymentSystem) {
+                const status = window.upiPaymentSystem.getPaymentStatus();
+                document.getElementById('payment-status').innerHTML = status ? 
+                    `<pre>${JSON.stringify(status, null, 2)}</pre>` : 
+                    '<p>No pending payments</p>';
+            } else {
+                alert('UPI Payment System not loaded');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCartInfo();
+            console.log('UPI Payment Test Page loaded');
+        });
+    </script>
+</body>
+</html>

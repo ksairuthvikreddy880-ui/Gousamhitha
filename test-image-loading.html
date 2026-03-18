@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Image Loading Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .product-card { border: 1px solid #ddd; padding: 15px; text-align: center; }
+        .product-card img { width: 100%; height: 200px; object-fit: cover; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Image Loading Fix Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Status</h2>
+        <div id="test-status" class="status">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Product Grid Test</h2>
+        <div class="product-grid" id="test-grid">
+            <!-- Products will be loaded here -->
+        </div>
+    </div>
+    
+    <!-- Supabase Library -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Supabase Client -->
+    <script src="js/supabase-client.js"></script>
+    
+    <!-- Performance Optimizations -->
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/product-display-optimized.js"></script>
+    
+    <script>
+        async function testImageLoading() {
+            const statusDiv = document.getElementById('test-status');
+            const testGrid = document.getElementById('test-grid');
+            
+            try {
+                statusDiv.innerHTML = 'Loading Supabase...';
+                
+                // Wait for Supabase to be ready
+                if (!window.supabase) {
+                    throw new Error('Supabase not loaded');
+                }
+                
+                statusDiv.innerHTML = 'Fetching products...';
+                
+                // Fetch a few products to test
+                const { data: products, error } = await window.supabase
+                    .from('products')
+                    .select('id, name, image_url, price')
+                    .limit(4);
+                
+                if (error) {
+                    throw new Error(error.message);
+                }
+                
+                statusDiv.innerHTML = 'Rendering products...';
+                
+                if (products.length === 0) {
+                    testGrid.innerHTML = '<p>No products found in database</p>';
+                    statusDiv.innerHTML = 'No products to test with';
+                    statusDiv.className = 'status error';
+                    return;
+                }
+                
+                // Render products with images
+                testGrid.innerHTML = products.map(product => `
+                    <div class="product-card">
+                        <img src="${product.image_url || 'images/placeholder.png'}" 
+                             alt="${product.name}" 
+                             loading="lazy"
+                             onload="console.log('Image loaded:', '${product.name}')"
+                             onerror="console.error('Image failed:', '${product.name}', this.src)">
+                        <h3>${product.name}</h3>
+                        <p>₹${product.price}</p>
+                    </div>
+                `).join('');
+                
+                statusDiv.innerHTML = `✅ Successfully loaded ${products.length} products with images`;
+                statusDiv.className = 'status success';
+                
+                // Test image loading
+                const images = testGrid.querySelectorAll('img');
+                let loadedCount = 0;
+                let errorCount = 0;
+                
+                images.forEach(img => {
+                    img.addEventListener('load', () => {
+                        loadedCount++;
+                        updateImageStatus();
+                    });
+                    img.addEventListener('error', () => {
+                        errorCount++;
+                        updateImageStatus();
+                    });
+                });
+                
+                function updateImageStatus() {
+                    if (loadedCount + errorCount === images.length) {
+                        statusDiv.innerHTML = `✅ Images: ${loadedCount} loaded, ${errorCount} failed out of ${images.length} total`;
+                        statusDiv.className = errorCount === 0 ? 'status success' : 'status error';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Test error:', error);
+                statusDiv.innerHTML = `❌ Test failed: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        // Run test when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.supabase) {
+                testImageLoading();
+            } else {
+                window.addEventListener('supabaseReady', testImageLoading);
+            }
+        });
+    </script>
+</body>
+</html>
