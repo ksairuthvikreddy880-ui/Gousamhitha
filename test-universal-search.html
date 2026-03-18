@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Search Test - Gousamhitha</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="js/universal-search.js"></script>
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4a7c59;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4a7c59;
+        }
+        
+        .search-demo {
+            margin: 20px 0;
+        }
+        
+        .instructions {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🔍 Universal Search System Test</h1>
+            <p>Testing the new universal search functionality across all pages</p>
+            <div id="search-status">
+                <span>Status:</span>
+                <span class="status-indicator status-loading">Initializing...</span>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 Test Instructions</h3>
+            <div class="instructions">
+                <ol>
+                    <li><strong>Type in the search bar below</strong> - Try "milk", "paneer", "ghee", or "organic"</li>
+                    <li><strong>Watch for dropdown</strong> - Should appear after typing 1+ characters</li>
+                    <li><strong>Click on suggestions</strong> - Should navigate to shop page</li>
+                    <li><strong>Press Enter</strong> - Should perform full search</li>
+                    <li><strong>Test on other pages</strong> - Search should work on all pages</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔍 Search Test Area</h3>
+            <div class="search-demo">
+                <div class="search-section">
+                    <input type="text" placeholder="Search for organic products..." class="main-search-bar" style="width: 100%; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                    <button class="search-btn" style="margin-top: 10px; padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">Search Products</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>✅ Expected Behavior</h3>
+            <ul>
+                <li><strong>Dropdown appears</strong> when typing (after 200ms delay)</li>
+                <li><strong>Product suggestions</strong> with images, names, and prices</li>
+                <li><strong>Highlight matching text</strong> in product names</li>
+                <li><strong>Loading spinner</strong> while searching</li>
+                <li><strong>"No results"</strong> message if nothing found</li>
+                <li><strong>"View all results"</strong> option for more than 4 results</li>
+                <li><strong>Keyboard navigation</strong> - Enter to search, Escape to close</li>
+                <li><strong>Click outside</strong> to close dropdown</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Debug Information</h3>
+            <div id="debug-info">
+                <p><strong>Universal Search Loaded:</strong> <span id="search-loaded">Checking...</span></p>
+                <p><strong>Products Loaded:</strong> <span id="products-loaded">Checking...</span></p>
+                <p><strong>Search Bars Found:</strong> <span id="search-bars-count">Checking...</span></p>
+                <p><strong>Supabase Available:</strong> <span id="supabase-status">Checking...</span></p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🌐 Test on Other Pages</h3>
+            <p>The search functionality should work on all these pages:</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 15px;">
+                <a href="index.html" style="padding: 10px; background: #4a7c59; color: white; text-decoration: none; border-radius: 6px; text-align: center;">Home</a>
+                <a href="shop.html" style="padding: 10px; background: #4a7c59; color: white; text-decoration: none; border-radius: 6px; text-align: center;">Shop</a>
+                <a href="cart.html" style="padding: 10px; background: #4a7c59; color: white; text-decoration: none; border-radius: 6px; text-align: center;">Cart</a>
+                <a href="orders.html" style="padding: 10px; background: #4a7c59; color: white; text-decoration: none; border-radius: 6px; text-align: center;">Orders</a>
+                <a href="about.html" style="padding: 10px; background: #4a7c59; color: white; text-decoration: none; border-radius: 6px; text-align: center;">About</a>
+                <a href="contact.html" style="padding: 10px; background: #4a7c59; color: white; text-decoration: none; border-radius: 6px; text-align: center;">Contact</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Debug and status checking
+        setTimeout(() => {
+            // Check if universal search is loaded
+            const searchLoaded = window.universalSearch ? 'Yes ✅' : 'No ❌';
+            document.getElementById('search-loaded').textContent = searchLoaded;
+            document.getElementById('search-loaded').className = window.universalSearch ? 'status-success' : 'status-error';
+            
+            // Check if products are loaded
+            const productsLoaded = window.universalSearch && window.universalSearch.products && window.universalSearch.products.length > 0 ? 
+                `Yes ✅ (${window.universalSearch.products.length} products)` : 'No ❌';
+            document.getElementById('products-loaded').textContent = productsLoaded;
+            
+            // Check search bars
+            const searchBars = document.querySelectorAll('.main-search-bar').length;
+            document.getElementById('search-bars-count').textContent = `${searchBars} found ✅`;
+            
+            // Check Supabase
+            const supabaseStatus = window.supabase ? 'Available ✅' : 'Not Available ⚠️ (Using fallback)';
+            document.getElementById('supabase-status').textContent = supabaseStatus;
+            
+            // Update overall status
+            const statusElement = document.querySelector('.status-indicator');
+            if (window.universalSearch) {
+                statusElement.textContent = 'Ready ✅';
+                statusElement.className = 'status-indicator status-success';
+            } else {
+                statusElement.textContent = 'Error ❌';
+                statusElement.className = 'status-indicator status-error';
+            }
+        }, 3000);
+        
+        // Log search events for debugging
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.querySelector('.main-search-bar');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    console.log('🔍 Search input:', e.target.value);
+                });
+                
+                searchInput.addEventListener('focus', () => {
+                    console.log('🔍 Search input focused');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

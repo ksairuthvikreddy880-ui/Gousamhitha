@@ -19,6 +19,7 @@
     <script src="js/category-filter-system.js"></script>
     <script src="js/back-button.js"></script>
     <script src="js/category-dropdown-enhancement.js"></script>
+    <script src="js/universal-search.js"></script>
     
     <!-- Supabase Library from CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -355,7 +356,151 @@
             if (window.databaseSearchEngine) {
                 window.databaseSearchEngine.displaySearchResults();
             }
+            
+            // Handle search results from universal search
+            displaySearchResults();
         });
+        
+        // Function to display search results from universal search
+        function displaySearchResults() {
+            const searchResults = sessionStorage.getItem('searchResults');
+            const searchTerm = sessionStorage.getItem('searchTerm');
+            
+            if (!searchResults || !searchTerm) return;
+            
+            try {
+                const products = JSON.parse(searchResults);
+                renderSearchResults(products, searchTerm);
+                
+                // Clear search data after displaying
+                sessionStorage.removeItem('searchResults');
+                sessionStorage.removeItem('searchTerm');
+            } catch (error) {
+                console.error('Error displaying search results:', error);
+            }
+        }
+        
+        // Function to render search results
+        function renderSearchResults(products, searchTerm) {
+            const productGrid = document.querySelector('.product-grid');
+            const pageTitle = document.querySelector('.page-header h1');
+            
+            if (pageTitle) {
+                pageTitle.innerHTML = `Search Results for "<span style="color: #4a7c59;">${searchTerm}</span>"`;
+            }
+            
+            if (!productGrid) return;
+            
+            // Add results count
+            const resultsCount = document.createElement('div');
+            resultsCount.className = 'search-results-info';
+            resultsCount.style.cssText = `
+                margin: 20px 0;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 4px solid #4a7c59;
+                font-size: 16px;
+                color: #333;
+            `;
+            resultsCount.innerHTML = `
+                <strong>Found ${products.length} product${products.length !== 1 ? 's' : ''}</strong> for "${searchTerm}"
+                ${products.length > 0 ? '<br><small style="color: #666;">Click on any product to view details or add to cart</small>' : ''}
+            `;
+            
+            const container = productGrid.parentNode;
+            const existingInfo = container.querySelector('.search-results-info');
+            if (existingInfo) {
+                existingInfo.remove();
+            }
+            container.insertBefore(resultsCount, productGrid);
+            
+            if (products.length === 0) {
+                productGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #666;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+                        <h3 style="margin-bottom: 10px; color: #333;">No products found for "${searchTerm}"</h3>
+                        <p style="margin-bottom: 30px;">Try searching with different keywords or browse our categories.</p>
+                        <button onclick="window.location.reload()" style="
+                            background: #4a7c59; 
+                            color: white; 
+                            border: none; 
+                            padding: 12px 24px; 
+                            border-radius: 8px; 
+                            cursor: pointer;
+                            font-size: 16px;
+                        ">Browse All Products</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Render products
+            productGrid.innerHTML = products.map(product => `
+                <div class="product-card" data-product-id="${product.id}" style="
+                    border: 2px solid #e0e0e0;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    transition: all 0.3s ease;
+                    background: white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                ">
+                    <div class="product-image" style="position: relative; overflow: hidden;">
+                        <img src="${product.image_url || 'images/placeholder.jpg'}" 
+                             alt="${escapeHtml(product.name)}" 
+                             style="width: 100%; height: 200px; object-fit: cover;"
+                             onerror="this.src='images/placeholder.jpg'">
+                        ${!product.in_stock ? '<div style="position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Out of Stock</div>' : ''}
+                    </div>
+                    <div class="product-info" style="padding: 16px;">
+                        <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #333;">${product.name}</h3>
+                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${product.category || 'Product'}</p>
+                        <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: bold; color: #4a7c59;">₹${product.price}</p>
+                        <button onclick="addToCart(${product.id})" 
+                                style="
+                                    width: 100%;
+                                    background: ${product.in_stock ? '#4a7c59' : '#6c757d'};
+                                    color: white;
+                                    border: none;
+                                    padding: 12px;
+                                    border-radius: 8px;
+                                    cursor: ${product.in_stock ? 'pointer' : 'not-allowed'};
+                                    font-size: 16px;
+                                    font-weight: 500;
+                                    transition: background-color 0.3s ease;
+                                "
+                                ${!product.in_stock ? 'disabled' : ''}
+                                onmouseover="if(!this.disabled) this.style.background='#3d6849'"
+                                onmouseout="if(!this.disabled) this.style.background='#4a7c59'">
+                            ${product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add hover effects
+            const productCards = productGrid.querySelectorAll('.product-card');
+            productCards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-5px)';
+                    card.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0)';
+                    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                });
+            });
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Make function globally available
+        window.displaySearchResults = displaySearchResults;
     </script>
 </body>
 </html>
