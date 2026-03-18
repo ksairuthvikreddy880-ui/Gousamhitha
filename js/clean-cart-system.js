@@ -9,63 +9,62 @@
             this.isUpdating = false;
         }
         
-        init() {
+        async init() {
             console.log('🛒 Initializing clean cart system');
             
-            // Wait for Supabase and DOM
-            this.waitForReady();
-        }
-        
-        waitForReady() {
-            const checkReady = () => {
-                if (window.supabase && document.getElementById('cart-items')) {
-                    console.log('🛒 System ready, loading cart');
-                    this.loadCart();
-                    this.setupEventHandlers();
-                } else {
-                    setTimeout(checkReady, 500);
-                }
-            };
-            checkReady();
+            // Check if Supabase is available
+            if (!window.supabase) {
+                console.error('🛒 Supabase not initialized');
+                this.showError('System not ready', 'Please refresh the page to try again');
+                return;
+            }
+            
+            // Check if cart container exists
+            if (!document.getElementById('cart-items')) {
+                console.error('🛒 Cart container not found');
+                return;
+            }
+            
+            console.log('🛒 System ready, loading cart');
+            await this.loadCart();
+            this.setupEventHandlers();
         }
         
         async loadCart() {
             const cartItemsDiv = document.getElementById('cart-items');
             
-            if (!window.supabase) {
-                console.log('🛒 Supabase not ready, showing fallback cart');
-                cartItemsDiv.innerHTML = `
-                    <div class="empty-cart" style="text-align: center; padding: 40px;">
-                        <p style="font-size: 18px; margin-bottom: 20px;">Cart is loading...</p>
-                        <p style="color: #666; font-size: 14px;">If this takes too long, please refresh the page</p>
-                    </div>
-                `;
+            if (!cartItemsDiv) {
+                console.error('🛒 Cart container not found');
                 return;
             }
             
+            // Show loading state
+            cartItemsDiv.innerHTML = `
+                <div class="loading-cart" style="text-align: center; padding: 40px;">
+                    <p style="font-size: 18px; margin-bottom: 20px;">Loading cart...</p>
+                    <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #4a7c59; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
+            
             try {
-                // Check if user is logged in
+                // Ensure Supabase auth is ready and get user
                 const { data: { user }, error: authError } = await window.supabase.auth.getUser();
                 
                 if (authError) {
-                    console.log('🛒 Auth error, showing login prompt:', authError);
-                    cartItemsDiv.innerHTML = `
-                        <div class="empty-cart" style="text-align: center; padding: 40px;">
-                            <p style="font-size: 18px; margin-bottom: 20px;">Please login to view your cart</p>
-                            <button onclick="openAuthModal()" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer;">Login</button>
-                        </div>
-                    `;
+                    console.error('🛒 Auth error:', authError);
+                    this.showLoginPrompt('Authentication error. Please login to view your cart.');
                     return;
                 }
                 
                 if (!user) {
                     console.log('🛒 No user logged in, showing login prompt');
-                    cartItemsDiv.innerHTML = `
-                        <div class="empty-cart" style="text-align: center; padding: 40px;">
-                            <p style="font-size: 18px; margin-bottom: 20px;">Please login to view your cart</p>
-                            <button onclick="openAuthModal()" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer;">Login</button>
-                        </div>
-                    `;
+                    this.showLoginPrompt('Please login to view your cart');
                     return;
                 }
                 
@@ -90,88 +89,115 @@
                 
                 if (error) {
                     console.error('🛒 Error loading cart:', error);
-                    cartItemsDiv.innerHTML = `
-                        <div class="empty-cart" style="text-align: center; padding: 40px;">
-                            <p style="font-size: 18px; margin-bottom: 20px; color: #d32f2f;">Error loading cart</p>
-                            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">There was an issue loading your cart items</p>
-                            <button onclick="window.location.reload()" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer;">Retry</button>
-                        </div>
-                    `;
+                    this.showError('Error loading cart', 'There was an issue loading your cart items');
                     return;
                 }
                 
                 console.log('🛒 Cart items loaded:', cartItems);
                 
                 if (!cartItems || cartItems.length === 0) {
-                    cartItemsDiv.innerHTML = `
-                        <div class="empty-cart" style="text-align: center; padding: 40px;">
-                            <p style="font-size: 18px; margin-bottom: 20px;">Your cart is empty</p>
-                            <a href="shop.html" class="btn btn-primary" style="display: inline-block; padding: 12px 24px; background: #4a7c59; color: white; text-decoration: none; border-radius: 8px;">Start Shopping</a>
-                        </div>
-                    `;
+                    this.showEmptyCart();
                     this.updateCartCount(0);
                     return;
                 }
                 
-                // Calculate total
-                let total = 0;
-                let totalItems = 0;
-                
-                // Display cart items
-                const cartHTML = cartItems.map(item => {
-                    const product = item.products;
-                    if (!product) {
-                        console.warn('🛒 Product not found for cart item:', item.id);
-                        return '';
-                    }
-                    
-                    const itemTotal = product.price * item.quantity;
-                    total += itemTotal;
-                    totalItems += item.quantity;
-                    
-                    return `
-                        <div class="cart-item" data-cart-id="${item.id}" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #eee; gap: 20px;">
-                            <img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
-                            <div class="cart-item-details" style="flex: 1;">
-                                <h3 style="margin: 0 0 5px 0; font-size: 18px;">${product.name}</h3>
-                                ${product.display_unit ? `<p style="color: #666; margin: 0 0 8px 0; font-size: 14px;">${product.display_unit}</p>` : ''}
-                                <p class="cart-item-price" style="color: #4a7c59; margin: 0; font-size: 16px; font-weight: 600;">₹${product.price}</p>
-                            </div>
-                            <div class="cart-item-quantity" style="display: flex; align-items: center; gap: 10px;">
-                                <button class="qty-btn minus-btn" data-cart-id="${item.id}" data-current="${item.quantity}" data-max="${product.stock}" style="width: 35px; height: 35px; border: 2px solid #4a7c59; background: white; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; color: #4a7c59;">-</button>
-                                <span class="quantity-display" style="min-width: 40px; text-align: center; font-weight: 600; font-size: 16px;">${item.quantity}</span>
-                                <button class="qty-btn plus-btn" data-cart-id="${item.id}" data-current="${item.quantity}" data-max="${product.stock}" style="width: 35px; height: 35px; border: 2px solid #4a7c59; background: white; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; color: #4a7c59;">+</button>
-                            </div>
-                            <div class="cart-item-total" style="text-align: right; min-width: 120px;">
-                                <p class="item-total" style="font-size: 18px; font-weight: 600; margin: 0 0 10px 0;">₹${itemTotal.toFixed(2)}</p>
-                                <button class="remove-btn" data-cart-id="${item.id}" style="padding: 8px 16px; background: #d32f2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Remove</button>
-                            </div>
-                        </div>
-                    `;
-                }).filter(html => html !== '').join('');
-                
-                const summaryHTML = `
-                    <div class="cart-summary" style="padding: 30px; background: #f9f9f9; margin-top: 20px; border-radius: 8px;">
-                        <h3 class="cart-total" style="margin: 0 0 20px 0; font-size: 24px;">Cart Total: ₹${total.toFixed(2)}</h3>
-                        <button onclick="proceedToCheckout()" class="btn btn-primary checkout-btn" style="width: 100%; padding: 14px 28px; background: #4a7c59; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#3d6b4a'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#4a7c59'; this.style.transform='translateY(0)'">Proceed to Checkout</button>
-                    </div>
-                `;
-                
-                cartItemsDiv.innerHTML = cartHTML + summaryHTML;
-                this.updateCartCount(totalItems);
+                // Calculate total and render cart
+                this.renderCartItems(cartItems);
                 
                 console.log('🛒 Cart loaded successfully');
                 
             } catch (error) {
                 console.error('🛒 Error loading cart:', error);
+                this.showError('Error loading cart', 'Please try refreshing the page');
+            }
+        }
+        
+        showLoginPrompt(message) {
+            const cartItemsDiv = document.getElementById('cart-items');
+            if (cartItemsDiv) {
                 cartItemsDiv.innerHTML = `
                     <div class="empty-cart" style="text-align: center; padding: 40px;">
-                        <p style="font-size: 18px; margin-bottom: 20px; color: #d32f2f;">Error loading cart</p>
-                        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Please try refreshing the page</p>
-                        <button onclick="window.location.reload()" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer;">Refresh Page</button>
+                        <p style="font-size: 18px; margin-bottom: 20px;">${message}</p>
+                        <button onclick="openAuthModal()" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer;">Login</button>
                     </div>
                 `;
             }
+        }
+        
+        showError(title, message) {
+            const cartItemsDiv = document.getElementById('cart-items');
+            if (cartItemsDiv) {
+                cartItemsDiv.innerHTML = `
+                    <div class="empty-cart" style="text-align: center; padding: 40px;">
+                        <p style="font-size: 18px; margin-bottom: 20px; color: #d32f2f;">${title}</p>
+                        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">${message}</p>
+                        <button onclick="window.location.reload()" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer;">Retry</button>
+                    </div>
+                `;
+            }
+        }
+        
+        showEmptyCart() {
+            const cartItemsDiv = document.getElementById('cart-items');
+            if (cartItemsDiv) {
+                cartItemsDiv.innerHTML = `
+                    <div class="empty-cart" style="text-align: center; padding: 40px;">
+                        <p style="font-size: 18px; margin-bottom: 20px;">Your cart is empty</p>
+                        <a href="shop.html" class="btn btn-primary" style="display: inline-block; padding: 12px 24px; background: #4a7c59; color: white; text-decoration: none; border-radius: 8px;">Start Shopping</a>
+                    </div>
+                `;
+            }
+        }
+        
+        renderCartItems(cartItems) {
+            const cartItemsDiv = document.getElementById('cart-items');
+            if (!cartItemsDiv) return;
+            
+            let total = 0;
+            let totalItems = 0;
+            
+            // Display cart items
+            const cartHTML = cartItems.map(item => {
+                const product = item.products;
+                if (!product) {
+                    console.warn('🛒 Product not found for cart item:', item.id);
+                    return '';
+                }
+                
+                const itemTotal = product.price * item.quantity;
+                total += itemTotal;
+                totalItems += item.quantity;
+                
+                return `
+                    <div class="cart-item" data-cart-id="${item.id}" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #eee; gap: 20px;">
+                        <img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
+                        <div class="cart-item-details" style="flex: 1;">
+                            <h3 style="margin: 0 0 5px 0; font-size: 18px;">${product.name}</h3>
+                            ${product.display_unit ? `<p style="color: #666; margin: 0 0 8px 0; font-size: 14px;">${product.display_unit}</p>` : ''}
+                            <p class="cart-item-price" style="color: #4a7c59; margin: 0; font-size: 16px; font-weight: 600;">₹${product.price}</p>
+                        </div>
+                        <div class="cart-item-quantity" style="display: flex; align-items: center; gap: 10px;">
+                            <button class="qty-btn minus-btn" data-cart-id="${item.id}" data-current="${item.quantity}" data-max="${product.stock}" style="width: 35px; height: 35px; border: 2px solid #4a7c59; background: white; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; color: #4a7c59;">-</button>
+                            <span class="quantity-display" style="min-width: 40px; text-align: center; font-weight: 600; font-size: 16px;">${item.quantity}</span>
+                            <button class="qty-btn plus-btn" data-cart-id="${item.id}" data-current="${item.quantity}" data-max="${product.stock}" style="width: 35px; height: 35px; border: 2px solid #4a7c59; background: white; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; color: #4a7c59;">+</button>
+                        </div>
+                        <div class="cart-item-total" style="text-align: right; min-width: 120px;">
+                            <p class="item-total" style="font-size: 18px; font-weight: 600; margin: 0 0 10px 0;">₹${itemTotal.toFixed(2)}</p>
+                            <button class="remove-btn" data-cart-id="${item.id}" style="padding: 8px 16px; background: #d32f2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Remove</button>
+                        </div>
+                    </div>
+                `;
+            }).filter(html => html !== '').join('');
+            
+            const summaryHTML = `
+                <div class="cart-summary" style="padding: 30px; background: #f9f9f9; margin-top: 20px; border-radius: 8px;">
+                    <h3 class="cart-total" style="margin: 0 0 20px 0; font-size: 24px;">Cart Total: ₹${total.toFixed(2)}</h3>
+                    <button onclick="proceedToCheckout()" class="btn btn-primary checkout-btn" style="width: 100%; padding: 14px 28px; background: #4a7c59; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#3d6b4a'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#4a7c59'; this.style.transform='translateY(0)'">Proceed to Checkout</button>
+                </div>
+            `;
+            
+            cartItemsDiv.innerHTML = cartHTML + summaryHTML;
+            this.updateCartCount(totalItems);
         }
         
         setupEventHandlers() {
@@ -425,19 +451,22 @@
     // Initialize clean cart system
     const cleanCartSystem = new CleanCartSystem();
     
-    // Override global functions to prevent conflicts
+    // Strong global function overrides to prevent conflicts
     window.loadCart = () => cleanCartSystem.loadCart();
     window.updateQuantity = () => {}; // Disable old function
     window.removeFromCart = () => {}; // Disable old function
+    window.updateCartCount = () => {}; // Disable conflicting cart count updaters
+    window.forceCartTotalUpdate = () => {}; // Disable cart total fix
     
-    // Start initialization
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            cleanCartSystem.init();
-        });
-    } else {
-        cleanCartSystem.init();
-    }
+    // Prevent other cart systems from initializing
+    window.CartOptimizer = { initialized: true };
+    window.CartCountUpdater = { initialized: true };
+    
+    // Clean initialization - only after DOM is ready
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('🛒 DOM ready, initializing cart system');
+        await cleanCartSystem.init();
+    });
     
     // Expose for debugging
     window.CleanCartSystem = cleanCartSystem;

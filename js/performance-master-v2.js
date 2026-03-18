@@ -250,11 +250,12 @@
         }
     }, ['product-optimizer']);
     
-    OptimizationCoordinator.register('cart-optimizer', async () => {
-        if (!window.CartOptimizer) {
-            await ScriptLoader.load('js/cart-optimized-v2.js');
-        }
-    }, ['performance-optimizer']);
+    // DISABLED: cart-optimizer conflicts with clean-cart-system.js
+    // OptimizationCoordinator.register('cart-optimizer', async () => {
+    //     if (!window.CartOptimizer) {
+    //         await ScriptLoader.load('js/cart-optimized-v2.js');
+    //     }
+    // }, ['performance-optimizer']);
     
     // Main initialization function
     async function initializePerformanceSystem() {
