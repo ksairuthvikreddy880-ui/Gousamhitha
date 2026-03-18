@@ -247,30 +247,11 @@ window.paymentCalculator = paymentCalculator;
 window.fixPaymentTotal = () => paymentCalculator.forceRecalculate();
 window.setPaymentTotal = (subtotal, tax, shipping) => paymentCalculator.setCustomTotal(subtotal, tax, shipping);
 
-// EMERGENCY: Force correct total after modal loads
+// forceCorrectTotal: recalculate from actual order data, no hardcoded values
 window.forceCorrectTotal = function() {
-    console.log('🚨 EMERGENCY: Forcing correct values (Total element removed)');
-    
-    // Set the correct values based on your cart
-    const subtotal = 2000; // ₹500 × 2 + ₹1000 × 1
-    const tax = subtotal * 0.05; // 5% = ₹100
-    const shipping = 0;
-    const total = subtotal + tax + shipping; // ₹2100
-    
-    console.log('🚨 Setting emergency values:', { subtotal, tax, shipping, total });
-    
-    // Update all elements immediately (except total which was removed)
-    const subtotalEl = document.getElementById('order-subtotal');
-    const taxEl = document.getElementById('order-tax');
-    const shippingEl = document.getElementById('order-shipping');
-    
-    if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toFixed(2)}`;
-    if (taxEl) taxEl.textContent = `₹${tax.toFixed(2)}`;
-    if (shippingEl) shippingEl.textContent = `₹${shipping.toFixed(2)}`;
-    
-    console.log('💳 Total element removed from UI as requested');
-    
-    return total;
+    if (window.paymentCalculator) {
+        window.paymentCalculator.recalculate();
+    }
 };
 
 console.log('💳 Payment Calculator loaded and ready');
