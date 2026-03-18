@@ -72,6 +72,7 @@
         display: -webkit-box !important;
         -webkit-line-clamp: 2 !important;
         -webkit-box-orient: vertical !important;
+        line-clamp: 2 !important;
         overflow: hidden !important;
     }
 
@@ -221,6 +222,7 @@
     .cart-item-details h3 {
         font-size: 13px !important;
         -webkit-line-clamp: 2 !important;
+        line-clamp: 2 !important;
     }
 
     .qty-btn {
