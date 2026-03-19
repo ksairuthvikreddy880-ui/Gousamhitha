@@ -1,27 +1,12 @@
 
 
-(function() {
-    const CLEAR_FLAG = 'dummy_data_cleared_v1';
-    if (!localStorage.getItem(CLEAR_FLAG)) {
-        console.log('Admin: Clearing all dummy data...');
-        localStorage.removeItem('products');
-        localStorage.removeItem('orders');
-        localStorage.setItem('products', JSON.stringify([]));
-        localStorage.setItem('orders', JSON.stringify([]));
-        localStorage.setItem(CLEAR_FLAG, 'true');
-        console.log('Admin: Dummy data cleared. System ready for real data.');
-    }
-})();
 
-
+// In-memory product cache — persists for the lifetime of the page session
+window.productCache = window.productCache || null;
 
 function initializeAdminData() {
-    console.log('Clearing localStorage to use Supabase database only...');
-    localStorage.removeItem('products');
-    localStorage.removeItem('orders');
-    localStorage.removeItem('vendors');
-    localStorage.removeItem('categories');
-    console.log('localStorage cleared - using Supabase database');
+    // Using Supabase only — no localStorage for data
+    console.log('Admin initialized — using Supabase database');
 }
 
 
@@ -67,35 +52,74 @@ function vendorLogout() {
 }
 
 
+const DASHBOARD_CACHE_KEY = 'admin_dashboard_summary';
+const DASHBOARD_CACHE_TIME_KEY = 'admin_dashboard_cache_time';
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
+function invalidateDashboardCache() {
+    localStorage.removeItem(DASHBOARD_CACHE_KEY);
+    localStorage.removeItem(DASHBOARD_CACHE_TIME_KEY);
+}
+
+function renderDashboard(summary) {
+    document.getElementById('total-products').textContent = summary.totalProducts;
+    document.getElementById('total-vendors').textContent = summary.totalVendors;
+    document.getElementById('total-orders').textContent = summary.totalOrders;
+    document.getElementById('out-of-stock').textContent = summary.outOfStock;
+    loadVendorsList();
+    const recentOrdersList = document.getElementById('recent-orders-list');
+    if (recentOrdersList && summary.recentOrders) {
+        recentOrdersList.innerHTML = summary.recentOrders.map(order => `
+            <div style="padding: 1rem; border-bottom: 1px solid #eee;">
+                <strong>${order.id}</strong> - ${order.customer_email} - ₹${order.total} - ${order.status}
+            </div>
+        `).join('') || '<p>No orders yet</p>';
+    }
+}
+
 async function loadDashboard() {
     try {
-        const { data: products, error: productsError } = await window.supabase
-            .from('products')
-            .select('*');
-        const { data: orders, error: ordersError } = await window.supabase
-            .from('orders')
-            .select('*');
-        const { data: vendors, error: vendorsError } = await window.supabase
-            .from('vendors')
-            .select('*');
-        const productsList = products || [];
-        const ordersList = orders || [];
-        const vendorsList = vendors || [];
-        const outOfStock = productsList.filter(p => !p.in_stock || p.stock === 0).length;
-        document.getElementById('total-products').textContent = productsList.length;
-        document.getElementById('total-vendors').textContent = vendorsList.length;
-        document.getElementById('total-orders').textContent = ordersList.length;
-        document.getElementById('out-of-stock').textContent = outOfStock;
-        loadVendorsList();
-        const recentOrdersList = document.getElementById('recent-orders-list');
-        if (recentOrdersList) {
-            const recentOrders = ordersList.slice(0, 5);
-            recentOrdersList.innerHTML = recentOrders.map(order => `
-                <div style="padding: 1rem; border-bottom: 1px solid #eee;">
-                    <strong>${order.id}</strong> - ${order.customer_email} - ₹${order.total} - ${order.status}
-                </div>
-            `).join('') || '<p>No orders yet</p>';
+        const cached = localStorage.getItem(DASHBOARD_CACHE_KEY);
+        const cacheTime = localStorage.getItem(DASHBOARD_CACHE_TIME_KEY);
+        if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_EXPIRY) {
+            console.log('Using cached dashboard summary');
+            renderDashboard(JSON.parse(cached));
+            return;
         }
+        console.log('Fetching fresh dashboard data');
+        // Fetch only what's needed: counts + minimal recent orders
+        const [
+            { data: products },
+            { data: orders },
+            { data: vendors }
+        ] = await Promise.all([
+            window.supabase.from('products').select('id, in_stock, stock'),
+            window.supabase.from('orders').select('id, customer_email, total, status').order('created_at', { ascending: false }).limit(5),
+            window.supabase.from('vendors').select('id')
+        ]);
+
+        // Also get total order count separately (lightweight)
+        const { count: totalOrders } = await window.supabase
+            .from('orders')
+            .select('id', { count: 'exact', head: true });
+
+        const productsList = products || [];
+        const summary = {
+            totalProducts: productsList.length,
+            totalVendors: (vendors || []).length,
+            totalOrders: totalOrders || 0,
+            outOfStock: productsList.filter(p => !p.in_stock || p.stock === 0).length,
+            recentOrders: orders || []
+        };
+
+        try {
+            localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(summary));
+            localStorage.setItem(DASHBOARD_CACHE_TIME_KEY, Date.now().toString());
+        } catch (e) {
+            console.warn('Cache write failed (quota), continuing without cache:', e.message);
+        }
+
+        renderDashboard(summary);
     } catch (error) {
         console.error('Error loading dashboard:', error);
     }
@@ -203,89 +227,83 @@ async function loadProductsTable() {
         console.error('❌ products-table-body element not found in DOM');
         return;
     }
-    
+
+    // Use memory cache if available
+    if (window.productCache) {
+        console.log('✅ Using cached products (memory)');
+        renderProductsTable(tbody, window.productCache);
+        return;
+    }
+
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading products...</td></tr>';
-    
+
     console.log('=== LOADING PRODUCTS TABLE ===');
     console.log('1. Checking Supabase client...');
-    
+
     if (typeof window.supabase === 'undefined') {
         console.error('❌ Supabase client not available!');
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">Database connection not available. Please refresh the page.</td></tr>';
         return;
     }
-    
+
     console.log('✓ Supabase client is available');
     console.log('2. Fetching products from Supabase database...');
-    
+
     try {
         const { data: products, error } = await window.supabase
             .from('products')
             .select('*')
             .order('created_at', { ascending: false });
-        
+
         console.log('3. Supabase query completed');
-        
+
         if (error) {
             console.error('❌ Error fetching products:', error);
-            console.error('   - Error message:', error.message);
-            console.error('   - Error code:', error.code);
-            console.error('   - Error details:', error.details);
-            console.error('   - Error hint:', error.hint);
-            
             tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">
                 <strong>Error loading products:</strong><br>
                 ${error.message}<br>
                 <small>Code: ${error.code || 'N/A'}</small><br>
-                <small>Details: ${error.details || 'N/A'}</small><br>
                 <small>Hint: ${error.hint || 'Check if the products table exists and RLS policies allow SELECT'}</small><br><br>
                 <button onclick="loadProductsTable()" class="btn-primary">Retry</button>
             </td></tr>`;
             return;
         }
-        
-        console.log('✅ Fetched products:', products);
-        console.log('   - Products count:', products ? products.length : 0);
-        
-        if (!products || products.length === 0) {
-            console.log('ℹ️ No products found in database');
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No products yet. Click "Add New Product" to add your first product.</td></tr>';
-            return;
-        }
-        
-        console.log('4. Rendering', products.length, 'products in table...');
-        
-        tbody.innerHTML = products.map(product => {
-            console.log('   - Rendering:', product.name, 'ID:', product.id);
-            return `
-            <tr>
-                <td><img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" class="product-image-small" onerror="this.src='images/placeholder.png'"></td>
-                <td>${product.name}</td>
-                <td>${product.category}</td>
-                <td>₹${product.price}</td>
-                <td>${product.stock}</td>
-                <td><span class="status-badge ${product.in_stock ? 'in-stock' : 'out-of-stock'}">${product.in_stock ? 'In Stock' : 'Out of Stock'}</span></td>
-                <td>
-                    <button class="action-btn btn-edit" onclick="editProduct('${product.id}')">Edit</button>
-                    <button class="action-btn btn-delete" onclick="deleteProduct('${product.id}')">Delete</button>
-                    <button class="action-btn btn-toggle" onclick="toggleStock('${product.id}')">${product.in_stock ? 'Mark Out' : 'Mark In'}</button>
-                </td>
-            </tr>
-        `}).join('');
-        
-        console.log('✅ Products table rendered successfully');
-        console.log('=== PRODUCTS TABLE LOAD COMPLETE ===');
+
+        window.productCache = products || [];
+        console.log('✅ Fetched and cached', window.productCache.length, 'products');
+        renderProductsTable(tbody, window.productCache);
+
     } catch (error) {
         console.error('❌ Exception while loading products:', error);
-        console.error('   - Error name:', error.name);
-        console.error('   - Error message:', error.message);
-        console.error('   - Error stack:', error.stack);
         tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #d32f2f;">
             <strong>Error loading products:</strong><br>
             ${error.message}<br><br>
             <button onclick="loadProductsTable()" class="btn-primary">Retry</button>
         </td></tr>`;
     }
+}
+
+function renderProductsTable(tbody, products) {
+    if (!products || products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No products yet. Click "Add New Product" to add your first product.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = products.map(product => `
+        <tr>
+            <td><img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" class="product-image-small" onerror="this.src='images/placeholder.png'"></td>
+            <td>${product.name}</td>
+            <td>${product.category}</td>
+            <td>₹${product.price}</td>
+            <td>${product.stock}</td>
+            <td><span class="status-badge ${product.in_stock ? 'in-stock' : 'out-of-stock'}">${product.in_stock ? 'In Stock' : 'Out of Stock'}</span></td>
+            <td>
+                <button class="action-btn btn-edit" onclick="editProduct('${product.id}')">Edit</button>
+                <button class="action-btn btn-delete" onclick="deleteProduct('${product.id}')">Delete</button>
+                <button class="action-btn btn-toggle" onclick="toggleStock('${product.id}')">${product.in_stock ? 'Mark Out' : 'Mark In'}</button>
+            </td>
+        </tr>
+    `).join('');
+    console.log('✅ Products table rendered successfully');
 }
 
 
@@ -302,6 +320,8 @@ async function deleteProduct(id) {
             return;
         }
         showToast('Product deleted successfully!');
+        invalidateDashboardCache();
+        window.productCache = null;
         loadProductsTable();
     } catch (error) {
         console.error('Error deleting product:', error);
@@ -331,6 +351,7 @@ async function toggleStock(id) {
             showToast('Error updating stock status', 'error');
             return;
         }
+        window.productCache = null;
         loadProductsTable();
     } catch (error) {
         console.error('Error toggling stock:', error);
@@ -455,6 +476,8 @@ async function updateProductInDatabase(id, updatedProduct) {
         
         console.log('Product updated successfully:', data);
         showToast('Product updated successfully!');
+        invalidateDashboardCache();
+        window.productCache = null;
         closeEditPanel();
         loadProductsTable();
     } catch (error) {
@@ -626,6 +649,8 @@ async function handleAddProduct(event) {
         
         messageEl.textContent = 'Product added successfully! Redirecting...';
         messageEl.className = 'form-message success';
+        invalidateDashboardCache();
+        window.productCache = null;
         
         document.getElementById('add-product-form').reset();
         document.getElementById('image-preview').innerHTML = '';
@@ -784,7 +809,7 @@ async function updateOrderStatus(orderId, newStatus) {
         }
         
         console.log('Step 3: Order status updated successfully');
-        
+        invalidateDashboardCache();
         if (typeof showToast === 'function') {
             showToast(`Order status updated to ${newStatus}`, 'success');
         }
@@ -828,6 +853,7 @@ async function deleteOrder(orderId) {
                 return;
             }
             alert('Order deleted successfully!');
+            invalidateDashboardCache();
             await loadOrdersTable();
         }
     } catch (error) {
