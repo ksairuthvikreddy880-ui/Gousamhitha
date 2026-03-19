@@ -10,20 +10,36 @@ function initializeAdminData() {
 }
 
 
-function handleAdminLogin(event) {
+async function handleAdminLogin(event) {
     event.preventDefault();
-    const email = document.getElementById('admin-email').value;
+    const email = document.getElementById('admin-email').value.trim();
     const password = document.getElementById('admin-password').value;
     const messageEl = document.getElementById('login-message');
-    if (email === 'ruthvik@blockfortrust.com' && password === 'Saireddy880227') {
+
+    const ADMIN_EMAIL = 'admin@123.com';
+
+    if (email !== ADMIN_EMAIL) {
+        messageEl.textContent = 'Invalid credentials';
+        messageEl.className = 'login-message error';
+        return;
+    }
+
+    messageEl.textContent = 'Signing in...';
+    messageEl.className = 'login-message';
+
+    try {
+        const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
+        if (error || !data.user) {
+            messageEl.textContent = 'Invalid credentials';
+            messageEl.className = 'login-message error';
+            return;
+        }
         localStorage.setItem('adminLoggedIn', 'true');
         messageEl.textContent = 'Login successful! Redirecting...';
         messageEl.className = 'login-message success';
-        setTimeout(() => {
-            window.location.href = 'admin-dashboard.html';
-        }, 1000);
-    } else {
-        messageEl.textContent = 'Invalid credentials';
+        setTimeout(() => { window.location.href = 'admin-dashboard.html'; }, 1000);
+    } catch (err) {
+        messageEl.textContent = 'Login failed. Please try again.';
         messageEl.className = 'login-message error';
     }
 }
