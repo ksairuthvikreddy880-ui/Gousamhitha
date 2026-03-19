@@ -32,26 +32,15 @@
         
         async loadCart() {
             const cartItemsDiv = document.getElementById('cart-items');
-            
+
             if (!cartItemsDiv) {
                 console.error('🛒 Cart container not found');
                 return;
             }
-            
-            // Show loading state
-            cartItemsDiv.innerHTML = `
-                <div class="loading-cart" style="text-align: center; padding: 40px;">
-                    <p style="font-size: 18px; margin-bottom: 20px;">Loading cart...</p>
-                    <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #4a7c59; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-                </div>
-                <style>
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                </style>
-            `;
-            
+
+            if (typeof showLoader === 'function') showLoader();
+            cartItemsDiv.innerHTML = '';
+
             try {
                 // Ensure Supabase auth is ready and get user
                 const { data: { user }, error: authError } = await window.supabase.auth.getUser();
@@ -59,12 +48,14 @@
                 if (authError) {
                     console.error('🛒 Auth error:', authError);
                     this.showLoginPrompt('Authentication error. Please login to view your cart.');
+                    if (typeof hideLoader === 'function') hideLoader();
                     return;
                 }
-                
+
                 if (!user) {
                     console.log('🛒 No user logged in, showing login prompt');
                     this.showLoginPrompt('Please login to view your cart');
+                    if (typeof hideLoader === 'function') hideLoader();
                     return;
                 }
                 
@@ -90,25 +81,29 @@
                 if (error) {
                     console.error('🛒 Error loading cart:', error);
                     this.showError('Error loading cart', 'There was an issue loading your cart items');
+                    if (typeof hideLoader === 'function') hideLoader();
                     return;
                 }
-                
+
                 console.log('🛒 Cart items loaded:', cartItems);
-                
+
                 if (!cartItems || cartItems.length === 0) {
                     this.showEmptyCart();
                     this.updateCartCount(0);
+                    if (typeof hideLoader === 'function') hideLoader();
                     return;
                 }
                 
                 // Calculate total and render cart
                 this.renderCartItems(cartItems);
-                
+                if (typeof hideLoader === 'function') hideLoader();
+
                 console.log('🛒 Cart loaded successfully');
-                
+
             } catch (error) {
                 console.error('🛒 Error loading cart:', error);
                 this.showError('Error loading cart', 'Please try refreshing the page');
+                if (typeof hideLoader === 'function') hideLoader();
             }
         }
         
@@ -118,7 +113,7 @@
                 cartItemsDiv.innerHTML = `
                     <div class="empty-cart" style="text-align: center; padding: 40px;">
                         <p style="font-size: 18px; margin-bottom: 20px;">${message}</p>
-                        <button onclick="openAuthModal()" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer;">Login</button>
+                        <button onclick="if(typeof openAuthModal==='function'){openAuthModal();}else{window.location.href='login.html';}" class="btn btn-primary" style="padding: 12px 24px; background: #4a7c59; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">Login</button>
                     </div>
                 `;
             }

@@ -296,11 +296,13 @@ async function getCurrentUser() {
 
 // Modal functions
 function openAuthModal() {
-    document.getElementById('auth-modal').classList.add('active');
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.classList.add('active');
 }
 
 function closeAuthModal() {
-    document.getElementById('auth-modal').classList.remove('active');
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.classList.remove('active');
 }
 
 function switchTab(tab) {

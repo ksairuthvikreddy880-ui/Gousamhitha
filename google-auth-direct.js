@@ -11,7 +11,7 @@ const GOOGLE_CONFIG = {
     responseType: 'code',
     authEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth'
 };
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = window.location.origin;
 
 
 

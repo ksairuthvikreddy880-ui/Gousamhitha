@@ -285,11 +285,15 @@
             <div id="orders-container" style="max-width: 1400px;">
                 
             </div>
+            <div style="text-align: center; padding: 1.5rem;">
+                <button id="load-more-orders-btn" onclick="loadSmartOrders(false)" style="display:none; background:#4a7c59; color:#fff; border:none; padding:0.75rem 2rem; border-radius:8px; font-size:1rem; cursor:pointer; font-weight:600;">Load More</button>
+            </div>
         </main>
     </div>
     
     <!-- Scripts -->
     <script src="js/loading-fix-enhanced.js"></script>
+    <script src="js/page-loader.js"></script>
     <script src="admin-script.js"></script>
     <script src="js/toast.js"></script>
     <script>
@@ -312,44 +316,73 @@
             window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
         };
         
-        async function loadSmartOrders() {
+        let orderOffset = 0;
+        const ORDER_LIMIT = 10;
+
+        async function loadSmartOrders(initial = true) {
             const container = document.getElementById('orders-container');
+            const loadMoreBtn = document.getElementById('load-more-orders-btn');
             if (!container) return;
-            
-            container.innerHTML = '<div style="text-align: center; padding: 3rem; color: #666;">Loading orders...</div>';
-            
+
+            if (initial) {
+                orderOffset = 0;
+                container.innerHTML = '';
+                if (typeof showLoader === 'function') showLoader();
+            } else {
+                if (loadMoreBtn) loadMoreBtn.textContent = 'Loading...';
+            }
+
             if (!window.supabase) {
                 container.innerHTML = '<div style="text-align: center; padding: 3rem; color: #d32f2f;">Database not connected. Please refresh.</div>';
+                if (typeof hideLoader === 'function') hideLoader();
                 return;
             }
-            
+
             try {
                 const { data: orders, error } = await window.supabase
                     .from('orders')
                     .select('*, order_items(*)')
-                    .order('created_at', { ascending: false });
-                
+                    .order('created_at', { ascending: false })
+                    .range(orderOffset, orderOffset + ORDER_LIMIT - 1);
+
                 if (error) {
                     console.error('Error fetching orders:', error);
-                    container.innerHTML = `<div style="text-align: center; padding: 3rem; color: #d32f2f;">Error: ${error.message}</div>`;
+                    if (initial) container.innerHTML = `<div style="text-align: center; padding: 3rem; color: #d32f2f;">Error: ${error.message}</div>`;
+                    if (typeof hideLoader === 'function') hideLoader();
                     return;
                 }
-                
-                if (!orders || orders.length === 0) {
+
+                if (initial && (!orders || orders.length === 0)) {
                     container.innerHTML = '<div style="text-align: center; padding: 3rem; color: #666;">No orders yet</div>';
+                    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+                    if (typeof hideLoader === 'function') hideLoader();
                     return;
                 }
-                
-                container.innerHTML = orders.map(order => renderOrderCard(order)).join('');
+
+                orders.forEach(order => {
+                    container.insertAdjacentHTML('beforeend', renderOrderCard(order));
+                });
+
+                orderOffset += orders.length;
+
+                if (loadMoreBtn) {
+                    loadMoreBtn.textContent = 'Load More';
+                    loadMoreBtn.style.display = orders.length < ORDER_LIMIT ? 'none' : 'block';
+                }
+
+                if (typeof hideLoader === 'function') hideLoader();
+
             } catch (error) {
                 console.error('Exception loading orders:', error);
-                container.innerHTML = `<div style="text-align: center; padding: 3rem; color: #d32f2f;">Error: ${error.message}</div>`;
+                if (initial) container.innerHTML = `<div style="text-align: center; padding: 3rem; color: #d32f2f;">Error: ${error.message}</div>`;
+                if (loadMoreBtn) loadMoreBtn.textContent = 'Load More';
+                if (typeof hideLoader === 'function') hideLoader();
             }
         }
         
         function renderOrderCard(order) {
             const items = order.order_items || [];
-            const itemsText = items.map(item => `${item.product_name} × ${item.quantity}`).join(', ');
+            const itemsText = items.map(item => `${item.product_name} ï¿½ ${item.quantity}`).join(', ');
             const orderDate = new Date(order.created_at).toLocaleString('en-IN', { 
                 day: 'numeric', 
                 month: 'short', 
@@ -405,7 +438,7 @@
                         <div>
                             <span class="payment-badge ${isCOD ? 'payment-cod' : 'payment-online'}">
                                 ${isCOD ? 'COD' : 'Online'}
-                                ${isPaid ? ' • Paid' : ' • Pending'}
+                                ${isPaid ? ' ï¿½ Paid' : ' ï¿½ Pending'}
                             </span>
                         </div>
                     </div>
@@ -477,7 +510,7 @@
                     showToast(`? Order status updated to ${newStatus}`, 'success');
                 }
                 
-                await loadSmartOrders();
+                await loadSmartOrders(true);
                 
             } catch (error) {
                 console.error('Exception:', error);
@@ -499,7 +532,7 @@
                 return;
             }
             
-            await loadSmartOrders();
+            await loadSmartOrders(true);
             
             const ordersChannel = window.supabase
                 .channel('admin-orders-realtime')
@@ -507,7 +540,7 @@
                     { event: 'UPDATE', schema: 'public', table: 'orders' },
                     (payload) => {
                         console.log('Order updated:', payload);
-                        loadSmartOrders();
+                        loadSmartOrders(true);
                     }
                 )
                 .subscribe();

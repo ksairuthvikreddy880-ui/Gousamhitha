@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/universal-search-fix.css">
     <link rel="stylesheet" href="css/bottom-nav.css">
     <script src="js/back-button.js"></script>
+    <script src="js/page-loader.js"></script>
     <script src="js/universal-search.js"></script>
 </head>
 <body>
@@ -489,9 +490,9 @@
             if (ordersList) {
                 ordersList.innerHTML = `
                     <div class="empty-state">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">??</div>
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">ðŸ”’</div>
                         <p style="font-size: 1.2rem; color: #666;">Please login to view your orders</p>
-                        <button onclick="openAuthModal()" style="margin-top: 1rem; padding: 0.7rem 1.5rem; background: #4a7c59; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Login</button>
+                        <button onclick="if(typeof openAuthModal==='function'){openAuthModal();}else{window.location.href='login.html';}" style="margin-top: 1rem; padding: 0.7rem 1.5rem; background: #4a7c59; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px;">Login</button>
                     </div>
                 `;
             }
@@ -500,9 +501,11 @@
         async function loadCustomerOrders() {
             const ordersList = document.getElementById('orders-list');
             if (!ordersList) return;
-            
+
+            if (typeof showLoader === 'function') showLoader();
+
             try {
-                ordersList.innerHTML = '<div class="empty-state"><p>Loading orders...</p></div>';
+                ordersList.innerHTML = '';
                 
                 // Get current user from Supabase
                 const { data: { user } } = await window.supabase.auth.getUser();
@@ -618,7 +621,7 @@
                                         <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f5f5f5;">
                                             <div style="flex: 1;">
                                                 <div style="font-weight: 500; font-size: 15px; color: #333;">${product?.name || item.product_name || 'Product'}</div>
-                                                <div style="font-size: 13px; color: #666; margin-top: 4px;">Qty: ${item.quantity} × ?${item.price}</div>
+                                                <div style="font-size: 13px; color: #666; margin-top: 4px;">Qty: ${item.quantity} ï¿½ ?${item.price}</div>
                                             </div>
                                             <div style="font-weight: 600; font-size: 16px; color: #4a7c59;">?${(item.quantity * item.price).toFixed(2)}</div>
                                         </div>
@@ -654,7 +657,9 @@
             } catch (error) {
                 console.error('Error loading orders:', error);
                 ordersList.innerHTML = '<div class="empty-state"><p>Error loading orders. Please try again.</p></div>';
+                if (typeof hideLoader === 'function') hideLoader();
             }
+            if (typeof hideLoader === 'function') hideLoader();
         }
     </script>
     <script src="js/page-detector.js"></script>

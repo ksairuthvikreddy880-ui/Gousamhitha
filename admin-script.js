@@ -79,11 +79,13 @@ function renderDashboard(summary) {
 
 async function loadDashboard() {
     try {
+        if (typeof showLoader === 'function') showLoader();
         const cached = localStorage.getItem(DASHBOARD_CACHE_KEY);
         const cacheTime = localStorage.getItem(DASHBOARD_CACHE_TIME_KEY);
         if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_EXPIRY) {
             console.log('Using cached dashboard summary');
             renderDashboard(JSON.parse(cached));
+            if (typeof hideLoader === 'function') hideLoader();
             return;
         }
         console.log('Fetching fresh dashboard data');
@@ -120,8 +122,10 @@ async function loadDashboard() {
         }
 
         renderDashboard(summary);
+        if (typeof hideLoader === 'function') hideLoader();
     } catch (error) {
         console.error('Error loading dashboard:', error);
+        if (typeof hideLoader === 'function') hideLoader();
     }
 }
 
@@ -236,6 +240,7 @@ async function loadProductsTable() {
     }
 
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading products...</td></tr>';
+    if (typeof showLoader === 'function') showLoader();
 
     console.log('=== LOADING PRODUCTS TABLE ===');
     console.log('1. Checking Supabase client...');
@@ -272,6 +277,7 @@ async function loadProductsTable() {
         window.productCache = products || [];
         console.log('✅ Fetched and cached', window.productCache.length, 'products');
         renderProductsTable(tbody, window.productCache);
+        if (typeof hideLoader === 'function') hideLoader();
 
     } catch (error) {
         console.error('❌ Exception while loading products:', error);
@@ -280,6 +286,7 @@ async function loadProductsTable() {
             ${error.message}<br><br>
             <button onclick="loadProductsTable()" class="btn-primary">Retry</button>
         </td></tr>`;
+        if (typeof hideLoader === 'function') hideLoader();
     }
 }
 
@@ -290,7 +297,7 @@ function renderProductsTable(tbody, products) {
     }
     tbody.innerHTML = products.map(product => `
         <tr>
-            <td><img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" class="product-image-small" onerror="this.src='images/placeholder.png'"></td>
+            <td><img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" class="product-image-small" loading="lazy" onerror="this.src='images/placeholder.png'"></td>
             <td>${product.name}</td>
             <td>${product.category}</td>
             <td>₹${product.price}</td>

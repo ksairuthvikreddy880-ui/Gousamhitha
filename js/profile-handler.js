@@ -87,17 +87,12 @@ if (!window.profileHandlerLoaded) {
     
     // Helper function to open auth modal
     function openAuthModal() {
-        if (typeof window.openAuthModal === 'function') {
-            window.openAuthModal();
+        const authModal = document.getElementById('auth-modal');
+        if (authModal) {
+            console.log('✅ Opening auth modal...');
+            authModal.classList.add('active');
         } else {
-            const authModal = document.getElementById('auth-modal');
-            if (authModal) {
-                console.log('✅ Opening auth modal...');
-                authModal.classList.add('active');
-                authModal.style.display = 'flex';
-            } else {
-                console.error('❌ Auth modal not found!');
-            }
+            console.error('❌ Auth modal not found!');
         }
     }
     
