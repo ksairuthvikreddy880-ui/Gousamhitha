@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -134,7 +134,7 @@
             if (isInitialized) return;
             isInitialized = true;
             
-            console.log('✅ Supabase ready, loading vendors...');
+            console.log('? Supabase ready, loading vendors...');
             await loadVendors();
             setupRealtimeSubscription();
         });
@@ -168,7 +168,7 @@
             
             // Check if already loading to prevent duplicates
             if (tbody.dataset.loading === 'true') {
-                console.log('🚫 Vendors already loading, skipping...');
+                console.log('?? Vendors already loading, skipping...');
                 return;
             }
             

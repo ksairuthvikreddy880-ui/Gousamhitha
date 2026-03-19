@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -77,7 +77,7 @@
     <script>
         // Wait for Supabase to be ready
         window.addEventListener('supabaseReady', async () => {
-            console.log('✅ Supabase ready, loading deliveries...');
+            console.log('? Supabase ready, loading deliveries...');
             await loadDeliveriesTable();
         });
         
@@ -173,7 +173,7 @@
                             <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">${items.length} item(s)</div>
                         </td>
                         <td style="font-weight: 600; color: #4a7c59;">
-                            <div>₹${order.total}</div>
+                            <div>?${order.total}</div>
                             <div style="font-size: 0.75rem; color: #666; margin-top: 0.2rem;">${order.payment_method}</div>
                             ${paymentStatusBtn}
                         </td>
@@ -268,9 +268,9 @@
                 console.log('Number of rows updated:', data ? data.length : 0);
                 
                 if (typeof showToast === 'function') {
-                    showToast(`✓ Order status updated to ${newStatus}`, 'success');
+                    showToast(`? Order status updated to ${newStatus}`, 'success');
                 } else {
-                    alert(`✓ Order status updated to ${newStatus}`);
+                    alert(`? Order status updated to ${newStatus}`);
                 }
                 
                 await loadDeliveriesTable();
@@ -342,9 +342,9 @@
                 const statusText = newStatus === 'paid' ? 'Paid' : 'Pending';
                 
                 if (typeof showToast === 'function') {
-                    showToast(`✓ Payment marked as ${statusText}`, 'success');
+                    showToast(`? Payment marked as ${statusText}`, 'success');
                 } else {
-                    alert(`✓ Payment marked as ${statusText}`);
+                    alert(`? Payment marked as ${statusText}`);
                 }
                 
                 await loadDeliveriesTable();

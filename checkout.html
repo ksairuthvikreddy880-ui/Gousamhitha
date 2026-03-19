@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -209,7 +209,7 @@
                         <div class="form-group">
                             <label for="pincode">Pincode *</label>
                             <input type="text" id="pincode" name="pincode" required maxlength="6" pattern="[0-9]{6}">
-                            <small style="color: #d32f2f; font-size: 12px; font-weight: 600;">⚠️ If using map selection, please verify the pincode is correct for your exact location</small>
+                            <small style="color: #d32f2f; font-size: 12px; font-weight: 600;">?? If using map selection, please verify the pincode is correct for your exact location</small>
                         </div>
                         
                         <div class="form-group">
@@ -240,9 +240,9 @@
                 </div>
                 <div class="footer-section">
                     <h3>Contact Info</h3>
-                    <p>Phone: +91 98765 43210</p>
-                    <p>Email: info@organiccow.com</p>
-                    <p>Address: Organic Farm, Village Road</p>
+                    <p>Phone: +91 9908003289</p>
+                    <p>Email: info@gousamhitha.com</p>
+                    <p>Address: Plot no 118, Kavuri Hills Phase 1, Madhapur, Hyderabad</p>
                 </div>
                 <div class="footer-section">
                     <h3>Follow Us</h3>
@@ -305,12 +305,12 @@
 
     <!-- CRITICAL: Inline config to avoid loading issues -->
     <script>
-        console.log('🔄 Setting up inline config...');
+        console.log('?? Setting up inline config...');
         window.SUPABASE_CONFIG = {
             url: "https://blsgyybaevuytmgpljyk.supabase.co",
             anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsc2d5eWJhZXZ1eXRtZ3BsanlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NjcyMjYsImV4cCI6MjA4NzM0MzIyNn0.G4gvoW-_7DxQ1y28oZEHS7OIVpsyHTlZewV02Th_meU"
         };
-        console.log('✅ Inline SUPABASE_CONFIG loaded');
+        console.log('? Inline SUPABASE_CONFIG loaded');
     </script>
     <!-- Supabase Scripts -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -331,7 +331,7 @@
     <!-- EMERGENCY: Inline openCheckoutPayment function -->
     <script>
         // Debug script loading
-        console.log('🔍 Checking script loading status...');
+        console.log('?? Checking script loading status...');
         
         // Wait a moment for scripts to load
         setTimeout(() => {
@@ -344,18 +344,18 @@
             
             // Test if payment.js loaded successfully
             if (typeof openCheckoutPayment !== 'undefined') {
-                console.log('✅ payment.js loaded successfully!');
+                console.log('? payment.js loaded successfully!');
             } else {
-                console.log('❌ payment.js failed to load, using emergency function');
+                console.log('? payment.js failed to load, using emergency function');
             }
         }, 1000);
         
         // Ensure openCheckoutPayment is available
         if (typeof openCheckoutPayment === 'undefined') {
-            console.log('🚨 openCheckoutPayment not found, creating inline version');
+            console.log('?? openCheckoutPayment not found, creating inline version');
             
             window.openCheckoutPayment = function(orderData) {
-                console.log('🚨 Using emergency openCheckoutPayment function');
+                console.log('?? Using emergency openCheckoutPayment function');
                 console.log('Order data:', orderData);
                 
                 // Calculate totals from items (never use hardcoded fallback)
@@ -366,34 +366,34 @@
                 const shipping = orderData.delivery_charge || 0;
                 const total = subtotal + tax + shipping;
                 
-                console.log('💰 Calculated totals:', { subtotal, tax, shipping, total });
+                console.log('?? Calculated totals:', { subtotal, tax, shipping, total });
                 
                 // Show confirmation
-                const confirmed = confirm(`Order Total: ₹${total.toFixed(2)}\n\nSubtotal: ₹${subtotal.toFixed(2)}\nTax (5%): ₹${tax.toFixed(2)}\nShipping: ₹${shipping.toFixed(2)}\n\nClick OK to place order with Cash on Delivery`);
+                const confirmed = confirm(`Order Total: ?${total.toFixed(2)}\n\nSubtotal: ?${subtotal.toFixed(2)}\nTax (5%): ?${tax.toFixed(2)}\nShipping: ?${shipping.toFixed(2)}\n\nClick OK to place order with Cash on Delivery`);
                 
                 if (confirmed) {
                     // Try to save the order directly
                     if (window.saveOrderToDatabase) {
-                        console.log('💾 Saving order to database...');
+                        console.log('?? Saving order to database...');
                         window.saveOrderToDatabase(orderData, 'Cash on Delivery', 'pending')
                             .then(() => {
-                                alert('✅ Order placed successfully!');
+                                alert('? Order placed successfully!');
                                 window.location.href = 'orders.html';
                             })
                             .catch(error => {
-                                console.error('❌ Order save error:', error);
-                                alert('❌ Error placing order: ' + error.message);
+                                console.error('? Order save error:', error);
+                                alert('? Error placing order: ' + error.message);
                             });
                     } else {
-                        console.error('❌ saveOrderToDatabase not available');
-                        alert('❌ Order processing not available. Please refresh and try again.');
+                        console.error('? saveOrderToDatabase not available');
+                        alert('? Order processing not available. Please refresh and try again.');
                     }
                 }
             };
             
-            console.log('✅ Emergency openCheckoutPayment function created');
+            console.log('? Emergency openCheckoutPayment function created');
         } else {
-            console.log('✅ openCheckoutPayment function is available from payment.js');
+            console.log('? openCheckoutPayment function is available from payment.js');
         }
     </script>
     <script>
@@ -459,9 +459,9 @@
                         <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
                             <div>
                                 <div style="font-weight: 500;">${product.name}</div>
-                                <div style="font-size: 13px; color: #666;">Qty: ${item.quantity} × ₹${product.price}</div>
+                                <div style="font-size: 13px; color: #666;">Qty: ${item.quantity} � ?${product.price}</div>
                             </div>
-                            <div style="font-weight: 600;">₹${(product.price * item.quantity).toFixed(2)}</div>
+                            <div style="font-weight: 600;">?${(product.price * item.quantity).toFixed(2)}</div>
                         </div>
                     `;
                 });
@@ -471,7 +471,7 @@
                     <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #eee;">
                         <div style="display: flex; justify-content: space-between; padding: 8px 0;">
                             <span>Subtotal</span>
-                            <span id="cart-subtotal">₹${cartSubtotal.toFixed(2)}</span>
+                            <span id="cart-subtotal">?${cartSubtotal.toFixed(2)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding: 8px 0;">
                             <span>Delivery Charge</span>
@@ -480,7 +480,7 @@
                         <div id="delivery-info-box"></div>
                         <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #333; margin-top: 10px; font-size: 18px; font-weight: 700;">
                             <span>Total</span>
-                            <span id="order-total" style="color: #4a7c59;">₹${cartSubtotal.toFixed(2)}</span>
+                            <span id="order-total" style="color: #4a7c59;">?${cartSubtotal.toFixed(2)}</span>
                         </div>
                     </div>
                 `;
@@ -510,7 +510,7 @@
         // Add event listener to pincode field
         // Wait for Supabase to be ready
         window.addEventListener('supabaseReady', async () => {
-            console.log('✅ Supabase ready, loading checkout...');
+            console.log('? Supabase ready, loading checkout...');
             await loadCheckoutSummary();
         });
         
@@ -590,7 +590,7 @@
             const deliveryCharge = currentDeliveryCharge || 0;
             const total = subtotal + deliveryCharge;
             
-            console.log('🛒 Checkout Calculation DEBUG:', {
+            console.log('?? Checkout Calculation DEBUG:', {
                 'cartItems': cartItems,
                 'calculated subtotal': subtotal,
                 'deliveryCharge': deliveryCharge,
@@ -620,10 +620,10 @@
                 notes: notes || ''
             };
             
-            console.log('📋 Order data prepared:', orderData);
-            console.log('📋 Cart items:', cartItems);
-            console.log('📋 Total calculation:', { subtotal, delivery_charge: currentDeliveryCharge, total });
-            console.log('🔄 Opening payment modal...');
+            console.log('?? Order data prepared:', orderData);
+            console.log('?? Cart items:', cartItems);
+            console.log('?? Total calculation:', { subtotal, delivery_charge: currentDeliveryCharge, total });
+            console.log('?? Opening payment modal...');
             
             openCheckoutPayment(orderData);
             
@@ -633,10 +633,10 @@
         // Test database connection function
         async function testDatabaseConnection() {
             try {
-                console.log('🔍 Testing database connection...');
+                console.log('?? Testing database connection...');
                 
                 if (!window.supabase) {
-                    console.error('❌ Supabase not initialized');
+                    console.error('? Supabase not initialized');
                     return false;
                 }
                 
@@ -647,14 +647,14 @@
                     .limit(1);
                 
                 if (error) {
-                    console.error('❌ Database connection test failed:', error);
+                    console.error('? Database connection test failed:', error);
                     return false;
                 }
                 
-                console.log('✅ Database connection successful');
+                console.log('? Database connection successful');
                 return true;
             } catch (error) {
-                console.error('❌ Database connection test error:', error);
+                console.error('? Database connection test error:', error);
                 return false;
             }
         }
@@ -679,7 +679,7 @@
                 console.log('Current User:', user ? user.id : 'No user logged in');
                 
                 if (userError) {
-                    console.error('❌ User fetch error:', userError);
+                    console.error('? User fetch error:', userError);
                     throw new Error('Authentication error: ' + userError.message);
                 }
                 
@@ -734,7 +734,7 @@
                     throw new Error('Invalid order total amount');
                 }
                 
-                console.log('✅ All validations passed');
+                console.log('? All validations passed');
                 
                 const orderRecord = {
                     user_id: user ? user.id : null,
@@ -763,9 +763,9 @@
                     .single();
 
                 if (orderError) {
-                    console.error('❌ Order insert error:', orderError);
-                    console.error('❌ Order record that failed:', orderRecord);
-                    console.error('❌ Error details:', {
+                    console.error('? Order insert error:', orderError);
+                    console.error('? Order record that failed:', orderRecord);
+                    console.error('? Error details:', {
                         message: orderError.message,
                         details: orderError.details,
                         hint: orderError.hint,
@@ -948,7 +948,7 @@
             map = L.map('map-container').setView([20.5937, 78.9629], 5);
             
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
+                attribution: '� OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(map);
 
@@ -1067,7 +1067,7 @@
                     if (addr.postcode) {
                         document.getElementById('pincode').value = addr.postcode;
                         // Show warning that pincode might be approximate
-                        showToast('⚠️ Please verify the pincode is correct for your exact location', 'warning');
+                        showToast('?? Please verify the pincode is correct for your exact location', 'warning');
                     }
                     
                     closeMapSelector();

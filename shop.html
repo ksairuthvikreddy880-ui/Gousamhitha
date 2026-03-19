@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -245,9 +245,9 @@
                 </div>
                 <div class="footer-section">
                     <h3>Contact Info</h3>
-                    <p>Phone: +91 98765 43210</p>
-                    <p>Email: info@organiccow.com</p>
-                    <p>Address: Organic Farm, Village Road</p>
+                    <p>Phone: +91 9908003289</p>
+                    <p>Email: info@gousamhitha.com</p>
+                    <p>Address: Plot no 118, Kavuri Hills Phase 1, Madhapur, Hyderabad</p>
                 </div>
                 <div class="footer-section">
                     <h3>Follow Us</h3>
@@ -381,7 +381,7 @@
                 if (section) section.scrollIntoView({ behavior: 'smooth' });
                 return;
             }
-            // No params — normal load, product-display.js handles it
+            // No params � normal load, product-display.js handles it
         }
 
         // Fetch single product by ID and show only that
@@ -396,7 +396,7 @@
             const productGrid = document.querySelector('.product-grid');
             if (productGrid) {
                 productGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#666;">
-                    <div style="font-size:32px;margin-bottom:12px;">🔍</div>
+                    <div style="font-size:32px;margin-bottom:12px;">??</div>
                     <p>Loading product...</p>
                 </div>`;
             }
@@ -431,7 +431,7 @@
             const productGrid = document.querySelector('.product-grid');
             if (productGrid) {
                 productGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#666;">
-                    <div style="font-size:32px;margin-bottom:12px;">🔍</div>
+                    <div style="font-size:32px;margin-bottom:12px;">??</div>
                     <p>Searching for "<strong>${searchTerm}</strong>"...</p>
                 </div>`;
             }
@@ -473,7 +473,7 @@
             if (products.length === 0) {
                 productGrid.innerHTML = `
                     <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#666;">
-                        <div style="font-size:48px;margin-bottom:20px;">🔍</div>
+                        <div style="font-size:48px;margin-bottom:20px;">??</div>
                         <h3>No products found for "${searchTerm}"</h3>
                         <button onclick="window.location.href='shop.html'" style="margin-top:20px;padding:12px 24px;background:#4a7c59;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px;">Browse All Products</button>
                     </div>`;
@@ -493,7 +493,7 @@
                         <img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" loading="lazy" onerror="this.src='images/placeholder.png'">
                         <h3 style="margin:0.8rem 0 0.3rem;font-size:1.1rem;color:#333;">${product.name}</h3>
                         ${unitDisplay ? `<p style="color:#666;font-size:0.85rem;margin:0.2rem 0;font-weight:500;">${unitDisplay}</p>` : ''}
-                        <p class="price" style="font-size:1.3rem;font-weight:700;color:#4a7c59;margin:0.5rem 0;">₹${product.price}</p>
+                        <p class="price" style="font-size:1.3rem;font-weight:700;color:#4a7c59;margin:0.5rem 0;">?${product.price}</p>
                         ${!isAvailable
                             ? `<div style="margin:0.5rem 0;padding:0.5rem;background:#ffebee;border-radius:8px;border:1px solid #ef5350;">
                                 <p style="color:#d32f2f;font-weight:700;font-size:0.95rem;margin:0;text-align:center;">OUT OF STOCK</p>

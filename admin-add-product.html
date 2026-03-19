@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -106,7 +106,7 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Price (₹) *</label>
+                            <label>Price (?) *</label>
                             <input type="number" id="product-price" required min="0" step="0.01">
                         </div>
                         
@@ -172,7 +172,7 @@
 
         // Wait for Supabase to be ready
         window.addEventListener('supabaseReady', async () => {
-            console.log('✅ Supabase ready, loading vendors and categories...');
+            console.log('? Supabase ready, loading vendors and categories...');
             await loadVendors();
             await loadCategories();
         });
@@ -204,7 +204,7 @@
                 vendorSelect.innerHTML = '<option value="">Select Vendor</option>' +
                     (vendors || []).map(v => `<option value="${v.id}">${v.vendor_name} - ${v.business_name}</option>`).join('');
                 
-                console.log('✅ Loaded', vendors.length, 'vendors');
+                console.log('? Loaded', vendors.length, 'vendors');
             } catch (error) {
                 console.error('Error loading vendors:', error);
             }
@@ -213,7 +213,7 @@
         async function loadCategories() {
             // For now, categories are hardcoded in the HTML
             // You can extend this to load from database if needed
-            console.log('✅ Categories loaded from dropdown');
+            console.log('? Categories loaded from dropdown');
         }
 
         function toggleCategoryManagement() {
@@ -237,7 +237,7 @@
         // Handle Add Product form submission
         window.handleAddProduct = async function(event) {
             event.preventDefault();
-            console.log('🚀 FORM SUBMITTED - handleAddProduct called');
+            console.log('?? FORM SUBMITTED - handleAddProduct called');
             
             const name = document.getElementById('product-name').value.trim();
             const category = document.getElementById('product-category').value;
@@ -303,7 +303,7 @@
                     return;
                 }
                 
-                console.log('✅ Product added:', data[0]);
+                console.log('? Product added:', data[0]);
                 messageEl.textContent = 'Product added successfully! Redirecting...';
                 messageEl.className = 'form-message success';
                 

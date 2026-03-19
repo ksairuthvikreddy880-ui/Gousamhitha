@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -295,7 +295,7 @@
     <script>
         // Wait for Supabase to be ready
         window.addEventListener('supabaseReady', async () => {
-            console.log('✅ Supabase ready, loading orders...');
+            console.log('? Supabase ready, loading orders...');
             if (typeof loadOrdersTable === 'function') {
                 await loadOrdersTable();
             }
@@ -349,7 +349,7 @@
         
         function renderOrderCard(order) {
             const items = order.order_items || [];
-            const itemsText = items.map(item => `${item.product_name} × ${item.quantity}`).join(', ');
+            const itemsText = items.map(item => `${item.product_name} � ${item.quantity}`).join(', ');
             const orderDate = new Date(order.created_at).toLocaleString('en-IN', { 
                 day: 'numeric', 
                 month: 'short', 
@@ -405,7 +405,7 @@
                         <div>
                             <span class="payment-badge ${isCOD ? 'payment-cod' : 'payment-online'}">
                                 ${isCOD ? 'COD' : 'Online'}
-                                ${isPaid ? ' • Paid' : ' • Pending'}
+                                ${isPaid ? ' � Paid' : ' � Pending'}
                             </span>
                         </div>
                     </div>
@@ -436,7 +436,7 @@
                     
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
                         ${quickActions}
-                        <div class="order-total">₹${order.total}</div>
+                        <div class="order-total">?${order.total}</div>
                     </div>
                 </div>
             `;
@@ -474,7 +474,7 @@
                 }
                 
                 if (typeof showToast === 'function') {
-                    showToast(`✓ Order status updated to ${newStatus}`, 'success');
+                    showToast(`? Order status updated to ${newStatus}`, 'success');
                 }
                 
                 await loadSmartOrders();
