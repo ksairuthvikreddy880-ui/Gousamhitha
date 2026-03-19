@@ -901,16 +901,3 @@ body {
     }
 }
 
-/* Hide Featured Products section on mobile only */
-@media (max-width: 768px) {
-    .featured-products {
-        display: none !important;
-    }
-}
-
-/* Hide top navbar cart button on mobile (bottom nav has cart) */
-@media (max-width: 768px) {
-    #cart-btn {
-        display: none !important;
-    }
-}
