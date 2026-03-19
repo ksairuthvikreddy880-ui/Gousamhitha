@@ -900,3 +900,10 @@ body {
         image-rendering: -webkit-optimize-contrast;
     }
 }
+
+/* Hide Featured Products section on mobile only */
+@media (max-width: 768px) {
+    .featured-products {
+        display: none !important;
+    }
+}
