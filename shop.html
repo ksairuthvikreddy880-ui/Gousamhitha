@@ -16,7 +16,6 @@
     <link rel="stylesheet" href="css/category-dropdown-fix.css">
     <link rel="stylesheet" href="css/category-nav-simple.css">
     <link rel="stylesheet" href="css/cart-button.css">
-    <script src="js/database-search-engine.js"></script>
     <script src="js/category-filter-system.js"></script>
     <script src="js/back-button.js"></script>
     <script src="js/category-dropdown-enhancement.js"></script>
@@ -354,50 +353,68 @@
     <script>
         // Initialize search results display on shop page
         document.addEventListener('DOMContentLoaded', function() {
-            handleSearchNavigation();
+            const params = new URLSearchParams(window.location.search);
+            if (!params.get('productId') && !params.get('search')) return; // nothing to do, let loadProducts handle it
+
+            // Wait for Supabase then run
+            if (window.supabase && typeof window.supabase.from === 'function') {
+                handleSearchNavigation();
+            } else {
+                window.addEventListener('supabaseReady', handleSearchNavigation);
+            }
         });
 
         // Main handler: called on load and from universal search
         async function handleSearchNavigation() {
             const params = new URLSearchParams(window.location.search);
             const searchQuery = params.get('search');
-            const productId = params.get('product');
+            const productId = params.get('productId');
 
-            if (searchQuery) {
-                await fetchAndRenderSearch(decodeURIComponent(searchQuery));
-                // Scroll to products section
-                const section = document.getElementById('products-section') || document.querySelector('.product-grid');
-                if (section) section.scrollIntoView({ behavior: 'smooth' });
+            if (productId) {
+                await fetchAndShowSingleProduct(productId);
                 return;
             }
 
-            if (productId) {
-                await highlightProduct(productId);
+            if (searchQuery) {
+                await fetchAndRenderSearch(decodeURIComponent(searchQuery));
+                const section = document.querySelector('.product-grid');
+                if (section) section.scrollIntoView({ behavior: 'smooth' });
                 return;
             }
             // No params — normal load, product-display.js handles it
         }
 
-        // Highlight a specific product card after the grid loads
-        async function highlightProduct(productId) {
-            // Wait up to 3s for product-display.js to render cards
+        // Fetch single product by ID and show only that
+        async function fetchAndShowSingleProduct(productId) {
             let attempts = 0;
-            while (attempts < 30) {
-                const card = document.querySelector(`[data-product-id="${productId}"]`);
-                if (card) {
-                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    card.style.outline = '3px solid #4a7c59';
-                    card.style.boxShadow = '0 0 20px rgba(74,124,89,0.4)';
-                    setTimeout(() => {
-                        card.style.outline = '';
-                        card.style.boxShadow = '';
-                    }, 3000);
-                    return;
-                }
+            while (!window.supabase && attempts < 40) {
                 await new Promise(r => setTimeout(r, 100));
                 attempts++;
             }
-            console.warn('Product card not found for id:', productId);
+            if (!window.supabase) return;
+
+            const productGrid = document.querySelector('.product-grid');
+            if (productGrid) {
+                productGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#666;">
+                    <div style="font-size:32px;margin-bottom:12px;">🔍</div>
+                    <p>Loading product...</p>
+                </div>`;
+            }
+
+            const { data: product, error } = await window.supabase
+                .from('products')
+                .select('id, name, price, image_url, category, in_stock, stock, unit, unit_quantity, display_unit')
+                .eq('id', productId)
+                .single();
+
+            if (error || !product) { console.error('Product fetch error:', error); return; }
+
+            // Update page title
+            const pageTitle = document.querySelector('.page-header h1');
+            if (pageTitle) pageTitle.textContent = product.name;
+
+            renderSearchResults([product], product.name);
+            document.querySelector('.product-grid')?.scrollIntoView({ behavior: 'smooth' });
         }
 
         // Fetch from Supabase and render filtered results
@@ -421,7 +438,7 @@
 
             const { data: products, error } = await window.supabase
                 .from('products')
-                .select('id, name, price, image_url, category, in_stock')
+                .select('id, name, price, image_url, category, in_stock, stock, unit, unit_quantity, display_unit')
                 .ilike('name', `%${searchTerm}%`);
 
             if (error) { console.error('Search error:', error); return; }
@@ -435,119 +452,101 @@
         function renderSearchResults(products, searchTerm) {
             const productGrid = document.querySelector('.product-grid');
             const pageTitle = document.querySelector('.page-header h1');
-            
+
             if (pageTitle) {
                 pageTitle.innerHTML = `Search Results for "<span style="color: #4a7c59;">${searchTerm}</span>"`;
             }
-            
+
             if (!productGrid) return;
-            
-            // Add results count
-            const resultsCount = document.createElement('div');
-            resultsCount.className = 'search-results-info';
-            resultsCount.style.cssText = `
-                margin: 20px 0;
-                padding: 15px;
-                background: #f8f9fa;
-                border-radius: 8px;
-                border-left: 4px solid #4a7c59;
-                font-size: 16px;
-                color: #333;
-            `;
-            resultsCount.innerHTML = `
-                <strong>Found ${products.length} product${products.length !== 1 ? 's' : ''}</strong> for "${searchTerm}"
-                ${products.length > 0 ? '<br><small style="color: #666;">Click on any product to view details or add to cart</small>' : ''}
-            `;
-            
+
+            // Results count banner
             const container = productGrid.parentNode;
             const existingInfo = container.querySelector('.search-results-info');
-            if (existingInfo) {
-                existingInfo.remove();
-            }
+            if (existingInfo) existingInfo.remove();
+
+            const resultsCount = document.createElement('div');
+            resultsCount.className = 'search-results-info';
+            resultsCount.style.cssText = 'margin:20px 0;padding:15px;background:#f8f9fa;border-radius:8px;border-left:4px solid #4a7c59;font-size:16px;color:#333;';
+            resultsCount.innerHTML = `<strong>Found ${products.length} product${products.length !== 1 ? 's' : ''}</strong> for "${searchTerm}"`;
             container.insertBefore(resultsCount, productGrid);
-            
+
             if (products.length === 0) {
                 productGrid.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #666;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
-                        <h3 style="margin-bottom: 10px; color: #333;">No products found for "${searchTerm}"</h3>
-                        <p style="margin-bottom: 30px;">Try searching with different keywords or browse our categories.</p>
-                        <button onclick="window.location.reload()" style="
-                            background: #4a7c59; 
-                            color: white; 
-                            border: none; 
-                            padding: 12px 24px; 
-                            border-radius: 8px; 
-                            cursor: pointer;
-                            font-size: 16px;
-                        ">Browse All Products</button>
-                    </div>
-                `;
+                    <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#666;">
+                        <div style="font-size:48px;margin-bottom:20px;">🔍</div>
+                        <h3>No products found for "${searchTerm}"</h3>
+                        <button onclick="window.location.href='shop.html'" style="margin-top:20px;padding:12px 24px;background:#4a7c59;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px;">Browse All Products</button>
+                    </div>`;
                 return;
             }
-            
-            // Render products
-            productGrid.innerHTML = products.map(product => `
-                <div class="product-card" data-product-id="${product.id}" style="
-                    border: 2px solid #e0e0e0;
-                    border-radius: 12px;
-                    overflow: hidden;
-                    transition: all 0.3s ease;
-                    background: white;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                ">
-                    <div class="product-image" style="position: relative; overflow: hidden;">
-                        <img src="${product.image_url || 'images/placeholder.jpg'}" 
-                             alt="${escapeHtml(product.name)}" 
-                             style="width: 100%; height: 200px; object-fit: cover;"
-                             onerror="this.src='images/placeholder.jpg'">
-                        ${!product.in_stock ? '<div style="position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Out of Stock</div>' : ''}
-                    </div>
-                    <div class="product-info" style="padding: 16px;">
-                        <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #333;">${product.name}</h3>
-                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${product.category || 'Product'}</p>
-                        <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: bold; color: #4a7c59;">₹${product.price}</p>
-                        <button onclick="addToCart(${product.id})" 
-                                style="
-                                    width: 100%;
-                                    background: ${product.in_stock ? '#4a7c59' : '#6c757d'};
-                                    color: white;
-                                    border: none;
-                                    padding: 12px;
-                                    border-radius: 8px;
-                                    cursor: ${product.in_stock ? 'pointer' : 'not-allowed'};
-                                    font-size: 16px;
-                                    font-weight: 500;
-                                    transition: background-color 0.3s ease;
-                                "
-                                ${!product.in_stock ? 'disabled' : ''}
-                                onmouseover="if(!this.disabled) this.style.background='#3d6849'"
-                                onmouseout="if(!this.disabled) this.style.background='#4a7c59'">
-                            ${product.in_stock ? 'Add to Cart' : 'Out of Stock'}
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-            
-            // Add hover effects
-            const productCards = productGrid.querySelectorAll('.product-card');
-            productCards.forEach(card => {
-                card.addEventListener('mouseenter', () => {
-                    card.style.transform = 'translateY(-5px)';
-                    card.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-                });
-                card.addEventListener('mouseleave', () => {
-                    card.style.transform = 'translateY(0)';
-                    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+
+            // Render cards matching the main product card layout (with quantity selector)
+            productGrid.innerHTML = products.map(product => {
+                const isAvailable = product.stock > 0 && product.in_stock !== false;
+                const unitDisplay = product.display_unit ||
+                    (product.unit_quantity ? product.unit_quantity + product.unit : product.unit || '');
+                const stockStatus = isAvailable ? `In Stock (${product.stock} left)` : 'Out of Stock';
+                const stockClass = isAvailable ? 'in-stock' : 'out-of-stock';
+
+                return `
+                    <div class="product-card" data-product-id="${product.id}">
+                        <img src="${product.image_url || 'images/placeholder.png'}" alt="${product.name}" loading="lazy" onerror="this.src='images/placeholder.png'">
+                        <h3 style="margin:0.8rem 0 0.3rem;font-size:1.1rem;color:#333;">${product.name}</h3>
+                        ${unitDisplay ? `<p style="color:#666;font-size:0.85rem;margin:0.2rem 0;font-weight:500;">${unitDisplay}</p>` : ''}
+                        <p class="price" style="font-size:1.3rem;font-weight:700;color:#4a7c59;margin:0.5rem 0;">₹${product.price}</p>
+                        ${!isAvailable
+                            ? `<div style="margin:0.5rem 0;padding:0.5rem;background:#ffebee;border-radius:8px;border:1px solid #ef5350;">
+                                <p style="color:#d32f2f;font-weight:700;font-size:0.95rem;margin:0;text-align:center;">OUT OF STOCK</p>
+                               </div>`
+                            : `<div class="stock-status" style="margin:0.5rem 0;">
+                                <span class="status-badge ${stockClass}" style="padding:0.3rem 0.8rem;border-radius:15px;font-size:0.75rem;font-weight:600;display:inline-block;background:#e8f5e9;color:#2e7d32;">${stockStatus}</span>
+                               </div>`
+                        }
+                        ${isAvailable
+                            ? `<div class="quantity-selector" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin:1rem 0;">
+                                <button class="qty-btn qty-dec" data-id="${product.id}" style="width:35px;height:35px;border:1px solid #4a7c59;background:white;color:#4a7c59;border-radius:5px;font-size:1.2rem;cursor:pointer;font-weight:bold;">-</button>
+                                <input type="number" id="qty-${product.id}" value="1" min="1" max="${product.stock}" style="width:60px;height:35px;text-align:center;border:1px solid #ddd;border-radius:5px;font-size:1rem;" readonly>
+                                <button class="qty-btn qty-inc" data-id="${product.id}" data-max="${product.stock}" style="width:35px;height:35px;border:1px solid #4a7c59;background:white;color:#4a7c59;border-radius:5px;font-size:1.2rem;cursor:pointer;font-weight:bold;">+</button>
+                               </div>
+                               <button class="add-to-cart-btn btn btn-primary"
+                                   data-id="${product.id}"
+                                   data-name="${product.name}"
+                                   data-price="${product.price}"
+                                   data-stock="${product.stock}"
+                                   style="display:block;width:100%;text-align:center;margin:0.5rem 0;padding:0.7rem;background:#4a7c59;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+                                   Add to Cart
+                               </button>`
+                            : `<button disabled style="display:block;width:100%;text-align:center;margin:1rem 0;padding:0.7rem;opacity:0.5;cursor:not-allowed;background:#ccc;color:#666;border:none;border-radius:8px;">Out of Stock</button>`
+                        }
+                    </div>`;
+            }).join('');
+
+            // Quantity controls
+            productGrid.querySelectorAll('.qty-dec').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const input = document.getElementById(`qty-${btn.dataset.id}`);
+                    if (input && parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
                 });
             });
-        }
-        
-        // Helper function to escape HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+
+            productGrid.querySelectorAll('.qty-inc').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const input = document.getElementById(`qty-${btn.dataset.id}`);
+                    const max = parseInt(btn.dataset.max);
+                    if (input && parseInt(input.value) < max) input.value = parseInt(input.value) + 1;
+                    else if (typeof showToast === 'function') showToast(`Maximum stock is ${max}`, 'error');
+                });
+            });
+
+            // Add to cart
+            productGrid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const { id, name, price, stock } = btn.dataset;
+                    const qty = document.getElementById(`qty-${id}`);
+                    const quantity = qty ? parseInt(qty.value) : 1;
+                    if (typeof addToCart === 'function') addToCart(id, name, Number(price), Number(stock));
+                });
+            });
         }
         
         // Make function globally available

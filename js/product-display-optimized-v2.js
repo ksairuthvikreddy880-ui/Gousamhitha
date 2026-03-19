@@ -131,12 +131,34 @@
         const productGrid = document.querySelector('.product-grid');
         const homeProductGrid = document.getElementById('home-product-grid');
         const targetGrid = productGrid || homeProductGrid;
-        
+
         if (!targetGrid) return;
-        
-        // Show loading state only if no cached data
+
+        // If productId or search param exists on shop page, let handleSearchNavigation handle it
+        if (productGrid && !homeProductGrid) {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('productId') || urlParams.get('search')) {
+                console.log('isSingleProductMode: true — skipping loadProductsOptimized');
+                return;
+            }
+        }
+
+        // Prevent duplicate concurrent calls
+        if (ProductState.loading) return;
+
+        // Show skeleton only if no cached data
         if (!ProductState.isValid()) {
-            targetGrid.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading products...</div>';
+            const count = homeProductGrid ? 4 : 8;
+            targetGrid.innerHTML = Array(count).fill(`
+                <div class="skeleton-card">
+                    <div class="skeleton-img skeleton-pulse"></div>
+                    <div class="skeleton-line skeleton-pulse" style="width:70%;margin-top:12px;"></div>
+                    <div class="skeleton-line skeleton-pulse" style="width:40%;margin-top:8px;"></div>
+                    <div class="skeleton-line skeleton-pulse" style="width:55%;margin-top:8px;"></div>
+                    <div class="skeleton-btn skeleton-pulse" style="margin-top:14px;"></div>
+                </div>
+            `).join('');
+            injectSkeletonStyles();
         }
         
         try {
@@ -256,6 +278,47 @@
         }
     }
     
+    // Inject skeleton CSS once
+    function injectSkeletonStyles() {
+        if (document.getElementById('skeleton-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'skeleton-styles';
+        style.textContent = `
+            .skeleton-card {
+                background: white;
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                overflow: hidden;
+            }
+            .skeleton-img {
+                width: 100%;
+                height: 180px;
+                border-radius: 8px;
+                background: #e0e0e0;
+            }
+            .skeleton-line {
+                height: 14px;
+                border-radius: 6px;
+                background: #e0e0e0;
+            }
+            .skeleton-btn {
+                width: 100%;
+                height: 40px;
+                border-radius: 8px;
+                background: #e0e0e0;
+            }
+            .skeleton-pulse {
+                animation: skeletonPulse 1.4s ease-in-out infinite;
+            }
+            @keyframes skeletonPulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     // Expose optimized product functions
     window.ProductOptimizer = {
         load: loadProductsOptimized,
@@ -286,20 +349,27 @@
         window.addToCart = addToCartOptimized;
     }
     
-    // Auto-initialize when DOM is ready
+    // Auto-initialize when DOM is ready — fire ONCE only
+    let _initDone = false;
+    function _initOnce() {
+        if (_initDone) return;
+        _initDone = true;
+        loadProductsOptimized();
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             if (window.supabase) {
-                loadProductsOptimized();
+                _initOnce();
             } else {
-                window.addEventListener('supabaseReady', loadProductsOptimized);
+                window.addEventListener('supabaseReady', _initOnce, { once: true });
             }
         });
     } else {
         if (window.supabase) {
-            loadProductsOptimized();
+            _initOnce();
         } else {
-            window.addEventListener('supabaseReady', loadProductsOptimized);
+            window.addEventListener('supabaseReady', _initOnce, { once: true });
         }
     }
     

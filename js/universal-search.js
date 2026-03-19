@@ -126,13 +126,21 @@ class UniversalSearch {
         try {
             const { data, error } = await window.supabase
                 .from('products')
-                .select('id, name, price, image_url, category')
+                .select('id, name')
                 .ilike('name', `%${query}%`)
-                .limit(5);
+                .limit(10);
 
             if (error) throw error;
 
-            this.renderDropdown(data || [], query, dropdown);
+            // Deduplicate by name
+            const seen = new Set();
+            const unique = (data || []).filter(p => {
+                if (seen.has(p.name)) return false;
+                seen.add(p.name);
+                return true;
+            }).slice(0, 5);
+
+            this.renderDropdown(unique, query, dropdown);
         } catch (err) {
             console.error('Search error:', err);
             dropdown.innerHTML = `<div class="search-no-results"><div class="no-results-text">Search failed. Try again.</div></div>`;
@@ -140,36 +148,28 @@ class UniversalSearch {
     }
 
     renderDropdown(results, query, dropdown) {
+        dropdown.innerHTML = '';
+
         if (results.length === 0) {
-            dropdown.innerHTML = `
-                <div class="search-no-results">
-                    <div class="no-results-icon">🔍</div>
-                    <div class="no-results-text">No products found for "${query}"</div>
-                    <div class="no-results-suggestion">Try different keywords</div>
-                </div>
-            `;
+            dropdown.innerHTML = `<div class="search-no-results">No results for "${query}"</div>`;
             dropdown.style.display = 'block';
             return;
         }
 
-        const resultsHTML = results.map(product => `
-            <div class="search-result-item" onclick="universalSearch.selectProduct(${product.id}, '${this.escapeHtml(product.name)}')">
-                <div class="result-image">
-                    <img src="${product.image_url || 'images/placeholder.jpg'}"
-                         alt="${this.escapeHtml(product.name)}"
-                         onerror="this.src='images/placeholder.jpg'">
-                </div>
-                <div class="result-info">
-                    <div class="result-name">${this.highlightMatch(product.name, query)}</div>
-                    <div class="result-meta">
-                        <span class="result-category">${product.category || 'Product'}</span>
-                        <span class="result-price">₹${product.price}</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        results.forEach(product => {
+            const item = document.createElement('div');
+            item.className = 'search-item';
+            item.dataset.id = product.id;
+            item.innerHTML = `🔍 ${this.highlightMatch(product.name, query)}`;
+            item.addEventListener('click', () => {
+                console.log('Clicked product:', product.id, product.name);
+                dropdown.innerHTML = '';
+                dropdown.style.display = 'none';
+                window.location.href = `shop.html?productId=${product.id}`;
+            });
+            dropdown.appendChild(item);
+        });
 
-        dropdown.innerHTML = resultsHTML;
         dropdown.style.display = 'block';
     }
 
@@ -191,14 +191,15 @@ class UniversalSearch {
 
     selectProduct(productId, productName) {
         document.querySelectorAll('.main-search-bar').forEach(input => { input.value = productName; });
-        document.querySelectorAll('.universal-search-dropdown').forEach(d => { d.style.display = 'none'; });
-        // Navigate with search query param — shop.html will filter by name
-        const query = encodeURIComponent(productName);
-        window.location.href = `shop.html?search=${query}`;
+        document.querySelectorAll('.universal-search-dropdown').forEach(d => {
+            d.innerHTML = '';
+            d.style.display = 'none';
+        });
+        window.location.href = `shop.html?productId=${productId}`;
     }
 
     viewProduct(productId) {
-        window.location.href = `shop.html?product=${productId}`;
+        window.location.href = `shop.html?productId=${productId}`;
     }
 
     performSearch(searchTerm) {
@@ -207,7 +208,6 @@ class UniversalSearch {
         if (!window.location.pathname.includes('shop.html')) {
             window.location.href = `shop.html?search=${query}`;
         } else {
-            // Already on shop page — update URL and re-filter
             window.history.replaceState(null, '', `shop.html?search=${query}`);
             if (window.handleSearchNavigation) window.handleSearchNavigation();
         }
@@ -255,13 +255,14 @@ class UniversalSearch {
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                padding: 15px 20px;
+                padding: 12px 14px;
                 color: #666;
+                font-size: 14px;
             }
 
             .loading-spinner {
-                width: 16px;
-                height: 16px;
+                width: 14px;
+                height: 14px;
                 border: 2px solid #f3f3f3;
                 border-top: 2px solid #4a7c59;
                 border-radius: 50%;
@@ -270,31 +271,28 @@ class UniversalSearch {
 
             @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-            .search-no-results { padding: 20px; text-align: center; color: #666; }
-            .no-results-icon { font-size: 24px; margin-bottom: 8px; }
-            .no-results-text { font-weight: 500; margin-bottom: 4px; }
-            .no-results-suggestion { font-size: 14px; color: #999; }
-
-            .search-result-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px 16px;
-                cursor: pointer;
-                border-bottom: 1px solid #f5f5f5;
-                transition: background-color 0.2s ease;
+            .search-no-results {
+                padding: 12px 14px;
+                color: #999;
+                font-size: 14px;
             }
-            .search-result-item:hover { background-color: #f8f9fa; }
-            .search-result-item:last-child { border-bottom: none; }
 
-            .result-image { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
-            .result-image img { width: 100%; height: 100%; object-fit: cover; }
+            .search-item {
+                padding: 10px 14px;
+                font-size: 14px;
+                color: #333;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
-            .result-info { flex: 1; min-width: 0; }
-            .result-name { font-weight: 500; color: #333; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .result-meta { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-            .result-category { color: #666; }
-            .result-price { color: #4a7c59; font-weight: 600; }
+            .search-item:last-child { border-bottom: none; }
+
+            .search-item:hover { background: #f5f5f5; }
+
+            .search-item strong { font-weight: 700; color: #000; background: none; }
 
             @media (max-width: 768px) {
                 .universal-search-dropdown { max-height: 250px; z-index: 10000; }

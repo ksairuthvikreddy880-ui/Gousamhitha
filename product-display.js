@@ -5,10 +5,27 @@ async function loadProducts() {
     const productGrid = document.querySelector('.product-grid');
     const homeProductGrid = document.getElementById('home-product-grid');
     const targetGrid = productGrid || homeProductGrid;
-    
+
     if (!targetGrid) return;
-    
-    targetGrid.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading products...</div>';
+
+    // If productId or search param exists on shop page, let handleSearchNavigation handle it
+    if (productGrid && !homeProductGrid) {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('productId') || urlParams.get('search')) {
+            console.log('INIT SHOP: search/productId param detected — skipping loadProducts');
+            return;
+        }
+    }
+
+    const skeletonCount = homeProductGrid ? 4 : 8;
+    targetGrid.innerHTML = Array(skeletonCount).fill(`
+        <div class="skeleton-card">
+            <div class="skeleton-img skeleton-pulse"></div>
+            <div class="skeleton-line skeleton-pulse" style="width:70%;margin-top:12px;"></div>
+            <div class="skeleton-line skeleton-pulse" style="width:40%;margin-top:8px;"></div>
+            <div class="skeleton-btn skeleton-pulse" style="margin-top:14px;"></div>
+        </div>
+    `).join('');
     
     try {
         console.log('Loading products from Supabase...');
@@ -223,26 +240,28 @@ async function addToCart(productId, productName, price, maxStock) {
     }
 }
 
-// Load products when page loads
+// Load products when page loads — fire ONCE only
+let _productDisplayInitDone = false;
 document.addEventListener('DOMContentLoaded', function() {
-    // Skip if optimizations are already loaded
+    if (_productDisplayInitDone) return;
+
+    // Skip if optimized version is handling it
     if (window.optimizationsLoaded) {
         console.log('⚡ Using optimized product display');
         return;
     }
-    
+
     console.log('DOM loaded, initializing product display...');
-    
-    // Wait for Supabase to be ready
+
     if (window.supabase && typeof window.supabase.from === 'function') {
-        console.log('Supabase already ready, loading products...');
+        _productDisplayInitDone = true;
         loadProducts();
     } else {
-        console.log('Waiting for Supabase to initialize...');
         window.addEventListener('supabaseReady', function() {
-            console.log('Supabase ready event received, loading products...');
+            if (_productDisplayInitDone) return;
+            _productDisplayInitDone = true;
             loadProducts();
-        });
+        }, { once: true });
     }
 });
 
