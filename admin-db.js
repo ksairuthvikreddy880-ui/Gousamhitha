@@ -428,17 +428,10 @@ function handleAdminLogin(event) {
     const email = document.getElementById('admin-email').value;
     const password = document.getElementById('admin-password').value;
     const messageEl = document.getElementById('login-message');
-    if (email === 'ruthvik@blockfortrust.com' && password === 'Saireddy880227') {
-        localStorage.setItem('adminLoggedIn', 'true');
-        messageEl.textContent = 'Login successful! Redirecting...';
-        messageEl.className = 'login-message success';
-        setTimeout(() => {
-            window.location.href = 'admin-dashboard.html';
-        }, 1000);
-    } else {
-        messageEl.textContent = 'Invalid credentials';
-        messageEl.className = 'login-message error';
-    }
+    // Admin login is handled via Supabase auth
+    messageEl.textContent = 'Please use the login page.';
+    messageEl.className = 'login-message error';
+    setTimeout(() => { window.location.href = 'login.html'; }, 1000);
 }
 function adminLogout() {
     const confirmLogout = confirm('Are you sure you want to logout?');

@@ -1143,13 +1143,9 @@ if (window.location.pathname.includes('admin-add-product.html')) {
 
 
 function initializeVendors() {
-    if (!localStorage.getItem('vendors')) {
-        const defaultVendors = [
-            { id: 1, name: "Gousamhitha Farm", email: "vendor@gousamhitha.com", password: "vendor123", phone: "9876543210", status: "active" }
-        ];
-        localStorage.setItem('vendors', JSON.stringify(defaultVendors));
-    }
+    // Vendors are managed via Supabase — no localStorage seed data
 }
+
 
 
 function initializeOrderItems() {

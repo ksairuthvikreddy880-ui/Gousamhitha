@@ -46,4 +46,3 @@ CREATE TRIGGER on_auth_user_created
 
 -- Step 5: Update password through Supabase Dashboard
 -- Go to Authentication → Users → Find admin@123.com → Reset Password
--- Set password to: Srigouadhar@2026

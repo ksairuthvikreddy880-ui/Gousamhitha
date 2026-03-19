@@ -372,17 +372,8 @@ function handleAdminLoginModal(event) {
     const email = document.getElementById('admin-modal-email').value;
     const password = document.getElementById('admin-modal-password').value;
     const messageEl = document.getElementById('admin-modal-message');
-    if (email === 'admin@gousamhitha.com' && password === 'admin123') {
-        localStorage.setItem('adminLoggedIn', 'true');
-        messageEl.textContent = 'Login successful! Redirecting to admin dashboard...';
-        messageEl.className = 'auth-message success';
-        setTimeout(() => {
-            window.location.href = 'admin-dashboard.html';
-        }, 1000);
-    } else {
-        messageEl.textContent = 'Invalid admin credentials';
-        messageEl.className = 'auth-message error';
-    }
+    // Admin login is handled via Supabase auth on login.html
+    window.location.href = 'login.html';
 }
 
 window.addEventListener('click', function(event) {
@@ -586,8 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-const ADMIN_EMAIL = 'ruthvik@blockfortrust.com';
-const ADMIN_PASSWORD = 'Saireddy880227';
+// Admin auth is handled via Supabase — no hardcoded credentials
 
 
 
@@ -598,11 +588,7 @@ function checkUserRole() {
         hideRoleButtons();
         return;
     }
-    if (email === ADMIN_EMAIL) {
-        hideRoleButtons();
-    } else {
-        hideRoleButtons();
-    }
+    hideRoleButtons();
 }
 
 function showRoleButtons(role) {
@@ -630,38 +616,8 @@ function hideRoleButtons() {
 }
 
 function enterAsAdmin() {
-    const email = document.getElementById('signin-email').value.trim();
-    const password = document.getElementById('signin-password').value.trim();
-    const messageEl = document.getElementById('signin-message');
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        localStorage.setItem('currentUser', email);
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', 'admin');
-        messageEl.textContent = 'Logging in as Admin...';
-        messageEl.className = 'auth-message success';
-        messageEl.style.display = 'block';
-        setTimeout(() => {
-            window.location.href = 'admin-dashboard.html';
-        }, 1000);
-        return;
-    }
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.email === email && u.password === password && u.role === 'admin');
-    if (user) {
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', 'admin');
-        messageEl.textContent = 'Logging in as Admin...';
-        messageEl.className = 'auth-message success';
-        messageEl.style.display = 'block';
-        setTimeout(() => {
-            window.location.href = 'admin-dashboard.html';
-        }, 1000);
-    } else {
-        messageEl.textContent = 'Invalid admin credentials';
-        messageEl.className = 'auth-message error';
-        messageEl.style.display = 'block';
-    }
+    // Admin login is handled via Supabase auth — redirect to login page
+    window.location.href = 'login.html';
 }
 
 
