@@ -24,13 +24,13 @@
             // Handle main category links only (no subcategories)
             document.querySelectorAll('.category-link, .category-filter-btn').forEach(link => {
                 link.addEventListener('click', (e) => {
-                    e.preventDefault();
                     const category = this.extractCategoryFromURL(link.href);
                     if (category) {
-                        this.filterByCategory(category);
-                        this.updateURL(category);
-                        this.updateActiveStates(link);
+                        // Navigate to shop with category param — reliable across all states
+                        window.location.href = 'shop.html?category=' + encodeURIComponent(category);
+                        e.preventDefault();
                     }
+                    // If no category (e.g. "All Products"), let the href navigate normally
                 });
             });
         }
