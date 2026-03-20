@@ -209,7 +209,7 @@
                         <div class="form-group">
                             <label for="pincode">Pincode *</label>
                             <input type="text" id="pincode" name="pincode" required maxlength="6" pattern="[0-9]{6}">
-                            <small style="color: #d32f2f; font-size: 12px; font-weight: 600;">?? If using map selection, please verify the pincode is correct for your exact location</small>
+                            <small style="color: #d32f2f; font-size: 12px; font-weight: 600;">⚠️ If using map selection, please verify the pincode is correct for your exact location</small>
                         </div>
                         
                         <div class="form-group">
@@ -1067,7 +1067,7 @@
                     if (addr.postcode) {
                         document.getElementById('pincode').value = addr.postcode;
                         // Show warning that pincode might be approximate
-                        showToast('?? Please verify the pincode is correct for your exact location', 'warning');
+                        showToast('⚠️ Please verify the pincode is correct for your exact location', 'warning');
                     }
                     
                     closeMapSelector();
