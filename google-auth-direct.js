@@ -9,10 +9,14 @@ async function handleGoogleSignIn() {
             alert('Auth not ready. Please refresh and try again.');
             return;
         }
+        const redirectTo = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/index.html'
+            : 'https://gousamhitha.com/index.html';
+
         const { error } = await window.supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/index.html'
+                redirectTo
             }
         });
         if (error) {
