@@ -901,3 +901,9 @@ body {
     }
 }
 
+
+@media (max-width: 768px) {
+    .featured-products {
+        display: none !important;
+    }
+}
