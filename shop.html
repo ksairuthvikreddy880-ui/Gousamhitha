@@ -454,6 +454,9 @@
             const productGrid = document.querySelector('.product-grid');
             const pageTitle = document.querySelector('.page-header h1');
 
+            // Clean URL so refresh goes back to full shop
+            history.replaceState(null, '', 'shop.html');
+
             if (pageTitle) {
                 pageTitle.innerHTML = `Search Results for "<span style="color: #4a7c59;">${searchTerm}</span>"`;
             }
