@@ -9,8 +9,8 @@ async function handleGoogleSignIn() {
             alert('Auth not ready. Please refresh and try again.');
             return;
         }
-        const redirectTo = window.location.hostname === 'localhost'
-            ? 'http://localhost:3000/index.html'
+        const redirectTo = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? window.location.origin + '/gousamhithatest-main/index.html'
             : 'https://gousamhitha.com/index.html';
 
         const { error } = await window.supabase.auth.signInWithOAuth({
