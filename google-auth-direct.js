@@ -9,9 +9,13 @@ async function handleGoogleSignIn() {
             alert('Auth not ready. Please refresh and try again.');
             return;
         }
-        const redirectTo = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
+        // Dynamically build redirect URL from current origin
+        // Works on localhost, Vercel preview URLs, and production domain
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const redirectTo = isLocalhost
             ? window.location.origin + '/gousamhithatest-main/index.html'
-            : 'https://gousamhitha.com/index.html';
+            : window.location.origin + '/index.html';
 
         const { error } = await window.supabase.auth.signInWithOAuth({
             provider: 'google',
