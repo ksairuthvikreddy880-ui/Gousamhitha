@@ -20,7 +20,7 @@
                 // Ensure Supabase is available
                 if (!window.supabase) {
                     console.error('❌ Supabase not available');
-                    alert('Database connection not available. Please refresh the page.');
+                    if (typeof showToast === 'function') showToast('Database connection not available. Please refresh the page.', 'error');
                     return;
                 }
                 
@@ -36,7 +36,7 @@
                 
                 if (error || !product) {
                     console.error('❌ Error loading product:', error);
-                    alert('Error loading product details. Please try again.');
+                    if (typeof showToast === 'function') showToast('Error loading product details. Please try again.', 'error');
                     return;
                 }
                 
@@ -50,7 +50,7 @@
                 
             } catch (error) {
                 console.error('❌ Error in editProductFixed:', error);
-                alert('Error opening edit modal: ' + error.message);
+                if (typeof showToast === 'function') showToast('Error opening edit modal: ' + error.message, 'error');
             }
         };
         
@@ -125,7 +125,7 @@
                     console.log('✅ Modal displayed successfully');
                 } else {
                     console.error('❌ Modal elements not found');
-                    alert('Edit modal not available. Please refresh the page.');
+                    if (typeof showToast === 'function') showToast('Edit modal not available. Please refresh the page.', 'error');
                 }
                 
             } catch (error) {
@@ -236,8 +236,10 @@
                 
                 console.log('✅ Product updated successfully:', data);
                 
-                // Show success message
-                alert('Product updated successfully!');
+                // Show success message via toast (no alert popup)
+                if (typeof showToast === 'function') {
+                    showToast('Product updated successfully!', 'success');
+                }
                 
                 // Close modal and reload
                 closeEditModalSafely();
@@ -255,7 +257,9 @@
                 
             } catch (error) {
                 console.error('❌ Error saving product:', error);
-                alert('Error updating product: ' + error.message);
+                if (typeof showToast === 'function') {
+                    showToast('Error updating product: ' + error.message, 'error');
+                }
             }
         };
         
@@ -298,13 +302,7 @@
                 window.editProduct = window.editProductFixed;
                 console.log('✅ editProduct function overridden');
             }
-            
-            // Override saveProductEdit
-            if (window.saveProductEdit) {
-                window.saveProductEdit = window.saveProductEditFixed;
-                console.log('✅ saveProductEdit function overridden');
-            }
-            
+
             // Override closeEditPanel
             window.closeEditPanel = closeEditModalSafely;
             console.log('✅ closeEditPanel function overridden');
@@ -313,13 +311,7 @@
         // Initialize overrides
         overrideExistingFunctions();
         
-        // Set up form handler
-        const editForm = document.getElementById('edit-product-form');
-        if (editForm) {
-            editForm.removeEventListener('submit', window.saveProductEdit);
-            editForm.addEventListener('submit', window.saveProductEditFixed);
-            console.log('✅ Form handler updated');
-        }
+        // NOTE: Do NOT attach a form submit handler here — admin-image-update-fix.js handles that
         
         isInitialized = true;
         console.log('✅ Edit modal error fix initialized successfully');

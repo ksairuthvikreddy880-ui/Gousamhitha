@@ -58,8 +58,6 @@
                 // Show warning but continue with update
                 if (typeof showToast === 'function') {
                     showToast('Warning: Image upload failed, updating other fields...', 'warning');
-                } else {
-                    alert('Warning: Image upload failed, updating other fields...');
                 }
             }
         } else {
@@ -86,8 +84,6 @@
             // Show success message
             if (typeof showToast === 'function') {
                 showToast('Product updated successfully!', 'success');
-            } else {
-                alert('Product updated successfully!');
             }
             
             // Close modal and reload
@@ -105,8 +101,6 @@
             
             if (typeof showToast === 'function') {
                 showToast('Error updating product: ' + error.message, 'error');
-            } else {
-                alert('Error updating product: ' + error.message);
             }
         }
     };
